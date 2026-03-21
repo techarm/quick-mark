@@ -273,7 +273,7 @@ function LinkRow({
           width: 28,
           height: 28,
           borderRadius: 'var(--radius-sm)',
-          background: 'var(--bg-elevated)',
+          background: 'rgba(255, 255, 255, 0.9)',
           flexShrink: 0,
         }}
       >
@@ -420,7 +420,7 @@ function LinkCard({
             width: 32,
             height: 32,
             borderRadius: 'var(--radius-sm)',
-            background: 'var(--bg-elevated)',
+            background: 'rgba(255, 255, 255, 0.9)',
             flexShrink: 0,
           }}
         >

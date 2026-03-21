@@ -167,16 +167,28 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {faviconUrl && (
-                    <img
-                      src={faviconUrl}
-                      alt=""
+                    <div
                       style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 3,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 28,
+                        height: 28,
+                        borderRadius: 'var(--radius-sm)',
+                        background: 'rgba(255, 255, 255, 0.9)',
                         flexShrink: 0,
                       }}
-                    />
+                    >
+                      <img
+                        src={faviconUrl}
+                        alt=""
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 3,
+                        }}
+                      />
+                    </div>
                   )}
                   <input
                     type="url"

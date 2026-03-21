@@ -289,7 +289,7 @@ function SearchResultItem({ link, onSelect }: { link: Link; onSelect: () => void
           width: 32,
           height: 32,
           borderRadius: 'var(--radius-md)',
-          background: 'var(--bg-elevated)',
+          background: 'rgba(255, 255, 255, 0.9)',
           flexShrink: 0,
         }}
       >
