@@ -34,19 +34,21 @@ export function CategoryDialog({
   const [name, setName] = useState('');
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [parentId, setParentId] = useState<string>('');
+  const [searchAlias, setSearchAlias] = useState('');
 
   const isEdit = !!category;
 
-  // カテゴリが変わったらフォームを初期化
   useEffect(() => {
     if (category) {
       setName(category.name);
       setColor(category.color || PRESET_COLORS[0]);
       setParentId(category.parent_id || '');
+      setSearchAlias(category.search_alias || '');
     } else {
       setName('');
       setColor(PRESET_COLORS[0]);
       setParentId('');
+      setSearchAlias('');
     }
   }, [category]);
 
@@ -67,6 +69,7 @@ export function CategoryDialog({
       name: name.trim(),
       parent_id: parentId || undefined,
       color,
+      search_alias: searchAlias.trim() || undefined,
     });
 
     onOpenChange(false);
@@ -146,6 +149,17 @@ export function CategoryDialog({
                     />
                   ))}
                 </div>
+              </div>
+
+              <div className="form-field">
+                <label className="form-label">検索キーワード</label>
+                <input
+                  type="text"
+                  value={searchAlias}
+                  onChange={(e) => setSearchAlias(e.target.value)}
+                  placeholder="英語名やキーワード（例: cloud, dev tools）"
+                  className="input-field"
+                />
               </div>
 
               <div className="form-field">

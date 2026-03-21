@@ -99,11 +99,13 @@ export function LinkList({ links, onOpen, onEdit, onDelete, onTogglePin }: LinkL
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 320px))',
           gap: 12,
           padding: 20,
           overflow: 'auto',
           flex: 1,
+          alignContent: 'start',
+          justifyContent: 'center',
         }}
       >
         {links.map((link) => (
@@ -163,21 +165,22 @@ function LinkRowMenu({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 24,
-            height: 24,
+            width: 26,
+            height: 26,
             border: 'none',
             borderRadius: 'var(--radius-sm)',
             background: 'transparent',
             color: 'var(--text-tertiary)',
             cursor: 'pointer',
-            opacity: 0,
-            transition: 'opacity 150ms ease',
+            transition: 'all 150ms ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = '1';
+            e.currentTarget.style.background = 'var(--bg-hover)';
+            e.currentTarget.style.color = 'var(--text-secondary)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = '0';
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = 'var(--text-tertiary)';
           }}
         >
           <MoreHorizontal size={14} />
@@ -396,58 +399,35 @@ function LinkCard({
       onKeyDown={(e) => {
         if (e.key === 'Enter') onOpen();
       }}
-      className="card-gradient"
+      className="card-gradient group"
       style={{
-        padding: 16,
+        padding: '14px 16px',
         cursor: 'pointer',
         borderColor: selected ? 'var(--border-focus)' : undefined,
         borderLeft: link.is_temporary ? '3px solid var(--accent-warm)' : undefined,
-        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
       }}
     >
-      {/* カードメニュー */}
-      <div style={{ position: 'absolute', top: 8, right: 8 }}>
-        <LinkRowMenu
-          link={link}
-          onOpen={onOpen}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onTogglePin={onTogglePin}
-        />
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 12,
-          marginBottom: 12,
-        }}
-      >
+      {/* ヘッダー: favicon + タイトル + メニュー */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 36,
-            height: 36,
-            borderRadius: 'var(--radius-md)',
+            width: 32,
+            height: 32,
+            borderRadius: 'var(--radius-sm)',
             background: 'var(--bg-elevated)',
             flexShrink: 0,
           }}
         >
           {link.favicon_url ? (
-            <img
-              src={link.favicon_url}
-              alt=""
-              style={{
-                width: 20,
-                height: 20,
-                borderRadius: 4,
-              }}
-            />
+            <img src={link.favicon_url} alt="" style={{ width: 18, height: 18, borderRadius: 3 }} />
           ) : (
-            <ExternalLink size={16} style={{ color: 'var(--text-tertiary)' }} />
+            <ExternalLink size={14} style={{ color: 'var(--text-tertiary)' }} />
           )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -459,7 +439,7 @@ function LinkCard({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              marginBottom: 2,
+              lineHeight: 1.3,
             }}
           >
             {link.title || link.url}
@@ -476,53 +456,55 @@ function LinkCard({
             {domain}
           </span>
         </div>
+        <div className="opacity-0 transition-opacity group-hover:opacity-100">
+          <LinkRowMenu
+            link={link}
+            onOpen={onOpen}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onTogglePin={onTogglePin}
+          />
+        </div>
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
+      {/* フッター: バッジ類 */}
+      {(link.is_pinned || expiryInfo || link.visit_count > 0) && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           {link.is_pinned && (
-            <Pin
-              size={11}
+            <span
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+                padding: '2px 7px',
+                borderRadius: 99,
+                fontSize: 10,
+                fontWeight: 500,
+                background: 'rgba(226, 80, 80, 0.12)',
                 color: 'var(--accent-primary)',
               }}
-            />
+            >
+              <Pin size={9} />
+              ピン留め
+            </span>
           )}
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
           {expiryInfo && (
             <span
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: 3,
-                padding: '2px 8px',
+                padding: '2px 7px',
                 borderRadius: 99,
                 fontSize: 10,
+                fontWeight: 500,
                 background: expiryInfo.urgent
                   ? 'rgba(255, 71, 87, 0.12)'
                   : 'rgba(245, 158, 11, 0.12)',
                 color: expiryInfo.urgent ? 'var(--accent-danger)' : 'var(--accent-warm)',
               }}
             >
+              <Timer size={9} />
               {expiryInfo.label}
             </span>
           )}
@@ -532,13 +514,14 @@ function LinkCard({
                 fontSize: 10,
                 color: 'var(--text-tertiary)',
                 fontVariantNumeric: 'tabular-nums',
+                marginLeft: 'auto',
               }}
             >
               {link.visit_count}回
             </span>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

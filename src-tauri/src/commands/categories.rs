@@ -13,6 +13,7 @@ pub struct Category {
     pub path: String,
     pub icon: String,
     pub color: String,
+    pub search_alias: String,
     pub position: i64,
     pub created_at: String,
     pub link_count: i64,
@@ -24,6 +25,7 @@ pub struct CreateCategoryInput {
     pub parent_id: Option<String>,
     pub icon: Option<String>,
     pub color: Option<String>,
+    pub search_alias: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -31,8 +33,10 @@ pub struct UpdateCategoryInput {
     pub id: String,
     pub name: Option<String>,
     pub parent_id: Option<String>,
+    pub set_parent_id: Option<bool>,
     pub icon: Option<String>,
     pub color: Option<String>,
+    pub search_alias: Option<String>,
     pub position: Option<i64>,
 }
 
@@ -44,6 +48,7 @@ fn row_to_category(row: &rusqlite::Row) -> rusqlite::Result<Category> {
         path: row.get("path")?,
         icon: row.get("icon")?,
         color: row.get("color")?,
+        search_alias: row.get("search_alias").unwrap_or_default(),
         position: row.get("position")?,
         created_at: row.get("created_at")?,
         link_count: row.get("link_count")?,
@@ -115,8 +120,8 @@ pub fn create_category(
         .unwrap_or(-1);
 
     conn.execute(
-        "INSERT INTO categories (id, name, parent_id, path, icon, color, position)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT INTO categories (id, name, parent_id, path, icon, color, search_alias, position)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
             id,
             input.name,
@@ -124,6 +129,7 @@ pub fn create_category(
             path,
             input.icon.unwrap_or_else(|| "folder".to_string()),
             input.color.unwrap_or_else(|| "#E25050".to_string()),
+            input.search_alias.unwrap_or_default(),
             max_pos + 1,
         ],
     )
@@ -166,12 +172,13 @@ pub fn update_category(
     add_field!("name", input.name);
     add_field!("icon", input.icon);
     add_field!("color", input.color);
+    add_field!("search_alias", input.search_alias);
     add_field!("position", input.position);
 
-    // parent_id の変更は物化パスの更新が必要（将来のタスクとして簡略化）
-    if let Some(ref parent_id) = input.parent_id {
+    // parent_id: set_parent_id=true の場合のみ更新（NULLへの変更を含む）
+    if input.set_parent_id.unwrap_or(false) {
         sets.push(format!("parent_id = ?{}", idx));
-        values.push(Box::new(parent_id.clone()));
+        values.push(Box::new(input.parent_id.clone()));
         idx += 1;
     }
 

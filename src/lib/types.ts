@@ -19,6 +19,7 @@ export interface CreateLinkInput {
   url: string;
   title: string;
   description?: string;
+  favicon_url?: string;
   category_id?: string;
   is_temporary?: boolean;
   expires_at?: string;
@@ -30,6 +31,7 @@ export interface UpdateLinkInput {
   url?: string;
   title?: string;
   description?: string;
+  favicon_url?: string;
   category_id?: string;
   is_temporary?: boolean;
   expires_at?: string;
@@ -43,6 +45,7 @@ export interface Category {
   path: string;
   icon: string;
   color: string;
+  search_alias: string;
   position: number;
   created_at: string;
   link_count: number;
@@ -53,14 +56,17 @@ export interface CreateCategoryInput {
   parent_id?: string;
   icon?: string;
   color?: string;
+  search_alias?: string;
 }
 
 export interface UpdateCategoryInput {
   id: string;
   name?: string;
-  parent_id?: string;
+  parent_id?: string | null;
+  set_parent_id?: boolean;
   icon?: string;
   color?: string;
+  search_alias?: string;
   position?: number;
 }
 

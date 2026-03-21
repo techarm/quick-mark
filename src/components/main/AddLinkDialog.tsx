@@ -1,6 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog';
-import { Globe, Link2, X } from 'lucide-react';
-import { useState } from 'react';
+import { Link2, Loader2, X } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
 import * as commands from '../../lib/commands';
 import type { Category, CreateLinkInput } from '../../lib/types';
 
@@ -15,10 +15,58 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [faviconUrl, setFaviconUrl] = useState('');
   const [categoryId, setCategoryId] = useState<string>('');
   const [isTemporary, setIsTemporary] = useState(false);
   const [expiryDays, setExpiryDays] = useState(7);
-  const [fetchingBrowser, setFetchingBrowser] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const lastFetchedUrl = useRef('');
+
+  const resetForm = useCallback(() => {
+    setUrl('');
+    setTitle('');
+    setDescription('');
+    setFaviconUrl('');
+    setCategoryId('');
+    setIsTemporary(false);
+    setExpiryDays(7);
+    lastFetchedUrl.current = '';
+  }, []);
+
+  // URL入力後のフォーカスアウトで自動取得
+  const handleUrlBlur = useCallback(async () => {
+    const trimmed = url.trim();
+    if (!trimmed || lastFetchedUrl.current === trimmed) return;
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return;
+
+    lastFetchedUrl.current = trimmed;
+    setFetching(true);
+
+    try {
+      const info = await commands.fetchUrlInfo(trimmed);
+      if (info.title && !title.trim()) {
+        setTitle(info.title);
+      }
+      if (info.description && !description.trim()) {
+        setDescription(info.description);
+      }
+      if (info.favicon_url) {
+        setFaviconUrl(info.favicon_url);
+      }
+    } catch (err) {
+      console.warn('URL info fetch failed, using fallback:', err);
+      // フォールバック: ドメインからfavicon URLを生成
+      try {
+        const domain = new URL(trimmed).hostname;
+        if (!title.trim()) setTitle(domain);
+        setFaviconUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=32`);
+      } catch {
+        // URL解析失敗
+      }
+    } finally {
+      setFetching(false);
+    }
+  }, [url, title, description]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,35 +80,14 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
       url: url.trim(),
       title: title.trim() || url.trim(),
       description: description.trim() || undefined,
+      favicon_url: faviconUrl || undefined,
       category_id: categoryId || undefined,
       is_temporary: isTemporary,
       expires_at: expiresAt,
     });
 
-    setUrl('');
-    setTitle('');
-    setDescription('');
-    setCategoryId('');
-    setIsTemporary(false);
-    setExpiryDays(7);
+    resetForm();
     onOpenChange(false);
-  };
-
-  const handleFetchBrowserUrl = async () => {
-    setFetchingBrowser(true);
-    try {
-      const info = await commands.getActiveBrowserUrl();
-      if (info) {
-        setUrl(info.url);
-        if (info.title && !title.trim()) {
-          setTitle(info.title);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to get browser URL:', err);
-    } finally {
-      setFetchingBrowser(false);
-    }
   };
 
   return (
@@ -107,54 +134,80 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
           <form onSubmit={handleSubmit}>
             <div
               className="dialog-body"
-              style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'relative' }}
             >
+              {/* ローディングオーバーレイ */}
+              {fetching && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(15, 11, 11, 0.6)',
+                    borderRadius: 'var(--radius-md)',
+                    zIndex: 10,
+                    gap: 10,
+                  }}
+                >
+                  <Loader2
+                    size={20}
+                    style={{
+                      color: 'var(--accent-primary)',
+                      animation: 'spin 800ms linear infinite',
+                    }}
+                  />
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                    URL情報を取得中...
+                  </span>
+                </div>
+              )}
+
+              {/* URL */}
               <div className="form-field">
                 <label className="form-label">
                   URL<span className="required">*</span>
                 </label>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {faviconUrl && (
+                    <img
+                      src={faviconUrl}
+                      alt=""
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 3,
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
                   <input
                     type="url"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
+                    onBlur={handleUrlBlur}
                     placeholder="https://example.com"
                     className="input-field"
                     style={{ flex: 1 }}
                     required
                   />
-                  <button
-                    type="button"
-                    onClick={handleFetchBrowserUrl}
-                    disabled={fetchingBrowser}
-                    className="btn btn-secondary"
-                    style={{
-                      height: 38,
-                      padding: '0 12px',
-                      gap: 6,
-                      flexShrink: 0,
-                      fontSize: 12,
-                      opacity: fetchingBrowser ? 0.6 : 1,
-                    }}
-                    title="ブラウザから取得"
-                  >
-                    <Globe size={14} />
-                    ブラウザから取得
-                  </button>
                 </div>
               </div>
 
+              {/* タイトル */}
               <div className="form-field">
                 <label className="form-label">タイトル</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="リンクのタイトル（空欄ならURLから取得）"
+                  placeholder="リンクのタイトル（空欄ならURLから自動取得）"
                   className="input-field"
                 />
               </div>
 
+              {/* 説明 */}
               <div className="form-field">
                 <label className="form-label">説明</label>
                 <textarea
@@ -172,6 +225,7 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
                 />
               </div>
 
+              {/* カテゴリ */}
               <div className="form-field">
                 <label className="form-label">カテゴリ</label>
                 <select
@@ -234,11 +288,17 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
                   キャンセル
                 </button>
               </Dialog.Close>
-              <button type="submit" className="btn btn-primary">
+              <button type="submit" className="btn btn-primary" disabled={fetching}>
                 追加する
               </button>
             </div>
           </form>
+
+          <style>{`
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

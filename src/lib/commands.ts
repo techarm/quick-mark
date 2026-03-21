@@ -49,6 +49,20 @@ export async function cleanupExpiredLinks(): Promise<number> {
   return invoke('cleanup_expired_links');
 }
 
+export interface UrlInfo {
+  title: string;
+  description: string;
+  favicon_url: string;
+}
+
+export async function fetchUrlInfo(url: string): Promise<UrlInfo> {
+  return invoke('fetch_url_info', { url });
+}
+
+export async function refreshFavicons(): Promise<number> {
+  return invoke('refresh_favicons');
+}
+
 // === カテゴリ ===
 
 export async function getCategories(): Promise<Category[]> {

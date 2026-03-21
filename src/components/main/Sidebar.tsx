@@ -1,4 +1,4 @@
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import * as ContextMenu from '@radix-ui/react-context-menu';
 import {
   Clock,
   FolderOpen,
@@ -249,15 +249,11 @@ function CategoryItem({
 
   return (
     <div>
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger asChild>
+      <ContextMenu.Root>
+        <ContextMenu.Trigger asChild>
           <button
             type="button"
             onClick={() => onSelect(category.id)}
-            onContextMenu={(e) => {
-              // 右クリックでドロップダウンが開くようにする
-              e.preventDefault();
-            }}
             className="sidebar-item"
             style={{
               paddingLeft: `${12 + depth * 20}px`,
@@ -283,32 +279,32 @@ function CategoryItem({
               <CountBadge active={active}>{category.link_count}</CountBadge>
             )}
           </button>
-        </DropdownMenu.Trigger>
+        </ContextMenu.Trigger>
         {(onEdit || onDelete) && (
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content className="dropdown-menu-content" sideOffset={4} align="start">
+          <ContextMenu.Portal>
+            <ContextMenu.Content className="dropdown-menu-content">
               {onEdit && (
-                <DropdownMenu.Item className="dropdown-menu-item" onSelect={() => onEdit(category)}>
+                <ContextMenu.Item className="dropdown-menu-item" onSelect={() => onEdit(category)}>
                   <Pencil size={14} />
                   編集
-                </DropdownMenu.Item>
+                </ContextMenu.Item>
               )}
               {onDelete && (
                 <>
-                  <DropdownMenu.Separator className="dropdown-menu-separator" />
-                  <DropdownMenu.Item
+                  <ContextMenu.Separator className="dropdown-menu-separator" />
+                  <ContextMenu.Item
                     className="dropdown-menu-item dropdown-menu-item-danger"
                     onSelect={() => onDelete(category)}
                   >
                     <Trash2 size={14} />
                     削除
-                  </DropdownMenu.Item>
+                  </ContextMenu.Item>
                 </>
               )}
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
+            </ContextMenu.Content>
+          </ContextMenu.Portal>
         )}
-      </DropdownMenu.Root>
+      </ContextMenu.Root>
       {childCategories.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {childCategories.map((child) => (

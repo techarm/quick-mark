@@ -28,6 +28,7 @@ pub struct CreateLinkInput {
     pub url: String,
     pub title: String,
     pub description: Option<String>,
+    pub favicon_url: Option<String>,
     pub category_id: Option<String>,
     pub is_temporary: Option<bool>,
     pub expires_at: Option<String>,
@@ -40,6 +41,7 @@ pub struct UpdateLinkInput {
     pub url: Option<String>,
     pub title: Option<String>,
     pub description: Option<String>,
+    pub favicon_url: Option<String>,
     pub category_id: Option<String>,
     pub is_temporary: Option<bool>,
     pub expires_at: Option<String>,
@@ -133,13 +135,14 @@ pub fn create_link(
     let id = uuid::Uuid::new_v4().to_string();
 
     conn.execute(
-        "INSERT INTO links (id, url, title, description, category_id, is_temporary, expires_at, is_pinned)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        "INSERT INTO links (id, url, title, description, favicon_url, category_id, is_temporary, expires_at, is_pinned)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
             id,
             input.url,
             input.title,
             input.description.unwrap_or_default(),
+            input.favicon_url.unwrap_or_default(),
             input.category_id,
             input.is_temporary.unwrap_or(false) as i64,
             input.expires_at,
@@ -183,6 +186,7 @@ pub fn update_link(
     add_field!("url", input.url);
     add_field!("title", input.title);
     add_field!("description", input.description);
+    add_field!("favicon_url", input.favicon_url);
     add_field!("category_id", input.category_id);
     add_field!("is_temporary", input.is_temporary.map(|b| b as i64));
     add_field!("expires_at", input.expires_at);
@@ -292,15 +296,18 @@ pub fn search_links(
         _ => {} // FTS5失敗またはゼロ件 → LIKEフォールバック
     }
 
-    // フォールバック: LIKE検索
+    // フォールバック: LIKE検索（カテゴリ名+エイリアスも対象）
     let like_pattern = format!("%{}%", query);
     let mut stmt = conn
         .prepare(
-            "SELECT * FROM links
-             WHERE title LIKE ?1 COLLATE NOCASE
-                OR url LIKE ?1 COLLATE NOCASE
-                OR description LIKE ?1 COLLATE NOCASE
-             ORDER BY visit_count DESC, last_visited_at DESC
+            "SELECT l.* FROM links l
+             LEFT JOIN categories c ON l.category_id = c.id
+             WHERE l.title LIKE ?1 COLLATE NOCASE
+                OR l.url LIKE ?1 COLLATE NOCASE
+                OR l.description LIKE ?1 COLLATE NOCASE
+                OR c.name LIKE ?1 COLLATE NOCASE
+                OR c.search_alias LIKE ?1 COLLATE NOCASE
+             ORDER BY l.visit_count DESC, l.last_visited_at DESC
              LIMIT 20",
         )
         .map_err(|e| e.to_string())?;
@@ -354,4 +361,46 @@ pub fn cleanup_expired_links(
         .map_err(|e| e.to_string())?;
 
     Ok(deleted as i64)
+}
+
+/// favicon_urlが空のリンクにGoogle Favicon URLを一括設定
+#[tauri::command]
+pub fn refresh_favicons(
+    db: State<'_, Mutex<AppDb>>,
+) -> Result<i64, String> {
+    let db = db.lock().map_err(|e| e.to_string())?;
+    let conn = &db.conn;
+
+    let mut stmt = conn
+        .prepare("SELECT id, url FROM links WHERE favicon_url IS NULL OR favicon_url = ''")
+        .map_err(|e| e.to_string())?;
+
+    let links: Vec<(String, String)> = stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    let mut updated = 0i64;
+    for (id, url) in &links {
+        let domain = url
+            .split("//")
+            .nth(1)
+            .unwrap_or(url)
+            .split('/')
+            .next()
+            .unwrap_or(url)
+            .split(':')
+            .next()
+            .unwrap_or(url);
+        let favicon_url = format!("https://www.google.com/s2/favicons?domain={}&sz=32", domain);
+        conn.execute(
+            "UPDATE links SET favicon_url = ?1 WHERE id = ?2",
+            params![favicon_url, id],
+        )
+        .map_err(|e| e.to_string())?;
+        updated += 1;
+    }
+
+    Ok(updated)
 }

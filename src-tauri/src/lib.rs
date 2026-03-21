@@ -34,6 +34,9 @@ pub fn run() {
             cleanup_expired_links,
             // ブラウザ
             get_active_browser_url,
+            fetch_url_info,
+            // Favicon一括更新
+            refresh_favicons,
             // インポート
             parse_bookmarks_html,
             parse_json_links,

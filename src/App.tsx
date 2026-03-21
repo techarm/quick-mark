@@ -118,10 +118,16 @@ function App() {
     loadCategories();
   }, [loadCategories]);
 
-  // 起動時に期限切れリンクをクリーンアップ
+  // 起動時に期限切れリンクをクリーンアップ + favicon更新
   useEffect(() => {
     commands.cleanupExpiredLinks().catch(console.error);
-  }, []);
+    commands
+      .refreshFavicons()
+      .then((count) => {
+        if (count > 0) loadLinks();
+      })
+      .catch(console.error);
+  }, [loadLinks]);
 
   // OS-level グローバルショートカット（Cmd+Shift+Space）
   // OS-level グローバルショートカット（Cmd+Shift+Space）→ 独立検索ウィンドウ
@@ -299,9 +305,11 @@ function App() {
           await commands.updateCategory({
             id: input.id,
             name: input.name,
-            parent_id: input.parent_id,
+            parent_id: input.parent_id || null,
+            set_parent_id: true,
             icon: input.icon,
             color: input.color,
+            search_alias: input.search_alias,
           });
         } else {
           await commands.createCategory(input);
@@ -412,7 +420,11 @@ function App() {
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         onComplete={() => {
-          loadLinks();
+          // インポート後にfaviconを一括更新してからリンクを再読み込み
+          commands
+            .refreshFavicons()
+            .then(() => loadLinks())
+            .catch(() => loadLinks());
           loadCategories();
         }}
       />
