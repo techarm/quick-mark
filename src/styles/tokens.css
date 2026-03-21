@@ -1,0 +1,57 @@
+/*
+ * QuickMark デザインシステム
+ * Bear/Raycast風 ダーク暖色系レッドテーマ
+ */
+
+:root {
+  /* === フォント === */
+  --font-sans:
+    "Hiragino Sans", "Noto Sans JP", "Hiragino Kaku Gothic ProN", -apple-system, BlinkMacSystemFont,
+    sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "Menlo", monospace;
+
+  /* === 背景レイヤー（暗→明） === */
+  --bg-base: rgba(16, 12, 12, 0.88);
+  --bg-surface: rgba(24, 18, 18, 0.78);
+  --bg-elevated: rgba(38, 28, 28, 0.82);
+  --bg-overlay: rgba(28, 20, 20, 0.94);
+  --bg-input: rgba(45, 32, 32, 0.6);
+
+  /* === メインカラー - レッド系 === */
+  --accent-primary: #e25050;
+  --accent-primary-hover: #ef6b6b;
+  --accent-gradient: linear-gradient(135deg, #e25050, #d63864);
+  --accent-subtle: rgba(226, 80, 80, 0.1);
+  --accent-warm: #f59e0b;
+  --accent-danger: #ff4757;
+  --accent-success: #2ed573;
+  --accent-muted: #8b6464;
+
+  /* === テキスト === */
+  --text-primary: rgba(250, 245, 245, 0.95);
+  --text-secondary: rgba(200, 180, 180, 0.7);
+  --text-tertiary: rgba(160, 140, 140, 0.5);
+  --text-on-accent: #ffffff;
+
+  /* === ボーダー === */
+  --border-subtle: rgba(255, 200, 200, 0.06);
+  --border-hover: rgba(255, 200, 200, 0.12);
+  --border-focus: rgba(226, 80, 80, 0.5);
+
+  /* === シャドウ === */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --shadow-overlay: 0 24px 48px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.2);
+
+  /* === 角丸 === */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* === レイアウト === */
+  --sidebar-width: 240px;
+  --detail-panel-width: 320px;
+  --titlebar-height: 38px;
+}
