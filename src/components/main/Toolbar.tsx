@@ -54,8 +54,11 @@ export function Toolbar({ onAddLink, searchQuery, onSearchChange }: ToolbarProps
 
       {/* 表示切替 */}
       <div
-        className="flex items-center rounded-lg p-[3px]"
         style={{
+          display: 'flex',
+          alignItems: 'center',
+          borderRadius: 'var(--radius-md)',
+          padding: 3,
           background: 'var(--bg-elevated)',
           border: '1px solid var(--border-subtle)',
         }}
@@ -72,12 +75,12 @@ export function Toolbar({ onAddLink, searchQuery, onSearchChange }: ToolbarProps
       <button
         type="button"
         onClick={onAddLink}
-        className="flex shrink-0 items-center gap-1.5 rounded-lg px-4 text-[13px] font-semibold transition-all duration-150"
+        className="btn btn-primary"
         style={{
-          height: '34px',
-          background: 'var(--accent-gradient)',
-          color: 'var(--text-on-accent)',
-          boxShadow: 'var(--shadow-glow-accent)',
+          height: 36,
+          padding: '0 18px',
+          gap: 6,
+          flexShrink: 0,
         }}
       >
         <Plus size={15} strokeWidth={2.5} />

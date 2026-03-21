@@ -41,11 +41,19 @@ export function Sidebar({ categories, linkCounts }: SidebarProps) {
   const getChildren = (parentId: string) => categories.filter((c) => c.parent_id === parentId);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden px-3 pb-3">
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        overflow: 'hidden',
+        padding: '4px 10px 12px',
+      }}
+    >
       {/* スマートフォルダ */}
-      <div className="mb-1">
+      <div style={{ marginBottom: 6 }}>
         <SectionHeader>スマートフォルダ</SectionHeader>
-        <nav className="flex flex-col gap-[1px]">
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {smartFilters.map((filter) => {
             const isActive = activeFilter === filter.id && !activeCategoryId;
             const count = getCount(filter.id);
@@ -79,35 +87,67 @@ export function Sidebar({ categories, linkCounts }: SidebarProps) {
       </div>
 
       {/* 区切り線 */}
-      <div className="mx-2 my-2" style={{ borderBottom: '1px solid var(--border-subtle)' }} />
+      <div style={{ margin: '8px 8px', borderBottom: '1px solid var(--border-subtle)' }} />
 
       {/* カテゴリ */}
-      <div className="flex flex-1 flex-col overflow-y-auto">
-        <div className="flex items-center justify-between pr-1">
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'auto' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingRight: 4,
+          }}
+        >
           <SectionHeader>カテゴリ</SectionHeader>
           <button
             type="button"
-            className="flex h-5 w-5 items-center justify-center rounded transition-colors"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 20,
+              height: 20,
+              borderRadius: 4,
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--text-tertiary)',
+              cursor: 'pointer',
+            }}
             title="カテゴリを追加"
           >
             <Plus size={13} strokeWidth={2} />
           </button>
         </div>
         {rootCategories.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 pb-8">
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flex: 1,
+              gap: 10,
+              paddingBottom: 32,
+            }}
+          >
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl"
-              style={{ background: 'var(--bg-elevated)' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 40,
+                height: 40,
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--bg-elevated)',
+              }}
             >
               <FolderOpen size={20} style={{ color: 'var(--text-tertiary)', opacity: 0.5 }} />
             </div>
-            <p className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>
-              カテゴリがありません
-            </p>
+            <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>カテゴリがありません</p>
           </div>
         ) : (
-          <nav className="flex flex-col gap-[1px]">
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {rootCategories.map((cat) => (
               <CategoryItem
                 key={cat.id}
@@ -129,8 +169,15 @@ export function Sidebar({ categories, linkCounts }: SidebarProps) {
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
     <h2
-      className="mb-1 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em]"
-      style={{ color: 'var(--text-tertiary)' }}
+      style={{
+        color: 'var(--text-tertiary)',
+        fontSize: 11,
+        fontWeight: 600,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        padding: '6px 12px 4px',
+        margin: 0,
+      }}
     >
       {children}
     </h2>
@@ -198,7 +245,7 @@ function CategoryItem({
         {category.link_count > 0 && <CountBadge active={active}>{category.link_count}</CountBadge>}
       </button>
       {childCategories.length > 0 && (
-        <div className="flex flex-col gap-[1px]">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {childCategories.map((child) => (
             <CategoryItem
               key={child.id}

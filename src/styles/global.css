@@ -427,7 +427,7 @@ input[type="number"].input-field::-webkit-outer-spin-button {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 7px 12px;
+  padding: 8px 14px;
   border-radius: var(--radius-md);
   font-size: 13px;
   text-align: left;
