@@ -66,6 +66,20 @@ export function SearchWindow() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [query, doSearch]);
 
+  // ウィンドウがフォーカスを失ったら非表示にする
+  useEffect(() => {
+    const handleBlur = () => {
+      // 少し遅延させてフォーカス移動先を確認（ウィンドウ内の要素への移動は無視）
+      setTimeout(async () => {
+        if (!document.hasFocus()) {
+          await hideWindow();
+        }
+      }, 100);
+    };
+    window.addEventListener('blur', handleBlur);
+    return () => window.removeEventListener('blur', handleBlur);
+  }, []);
+
   // リンクを開く
   const handleOpenLink = useCallback(async (link: Link) => {
     try {

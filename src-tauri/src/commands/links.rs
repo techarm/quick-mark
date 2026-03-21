@@ -232,53 +232,64 @@ pub fn search_links(
     let conn = &db.conn;
 
     if query.trim().is_empty() {
-        // 空クエリ: ピン留め + 最近 + 高頻度
-        let mut stmt = conn
-            .prepare(
-                "SELECT * FROM links WHERE is_pinned = 1
-                 UNION ALL
-                 SELECT * FROM links WHERE is_pinned = 0 ORDER BY last_visited_at DESC LIMIT 10",
-            )
+        // 空クエリ: ピン留め + 最近アクセス
+        let mut pinned_stmt = conn
+            .prepare("SELECT * FROM links WHERE is_pinned = 1 ORDER BY position, created_at DESC")
             .map_err(|e| e.to_string())?;
-        let links = stmt
+        let mut pinned: Vec<Link> = pinned_stmt
             .query_map([], row_to_link)
             .map_err(|e| e.to_string())?
             .filter_map(|r| r.ok())
             .collect();
-        return Ok(links);
+
+        let mut recent_stmt = conn
+            .prepare("SELECT * FROM links WHERE is_pinned = 0 ORDER BY last_visited_at DESC, created_at DESC LIMIT 10")
+            .map_err(|e| e.to_string())?;
+        let recent: Vec<Link> = recent_stmt
+            .query_map([], row_to_link)
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        pinned.extend(recent);
+        return Ok(pinned);
     }
 
-    // FTS5 検索（前方一致）
+    // FTS5 検索（前方一致） — 失敗時はLIKEにフォールバック
     let fts_query = query
         .split_whitespace()
         .map(|w| format!("{}*", w))
         .collect::<Vec<_>>()
         .join(" ");
 
-    let mut stmt = conn
-        .prepare(
-            "SELECT l.* FROM links_fts fts
-             JOIN links l ON l.rowid = fts.rowid
-             WHERE links_fts MATCH ?1
-             ORDER BY
-                (fts.rank * -1.0) * 0.5 +
-                (CASE WHEN l.visit_count > 0 THEN log(l.visit_count + 1) * 0.3 ELSE 0 END) +
-                (CASE WHEN l.last_visited_at IS NOT NULL
-                    THEN (julianday('now') - julianday(l.last_visited_at)) * -0.02 * 0.2
-                    ELSE 0 END)
-             DESC
-             LIMIT 20",
-        )
-        .map_err(|e| e.to_string())?;
+    let fts_results: Result<Vec<Link>, String> = (|| {
+        let mut stmt = conn
+            .prepare(
+                "SELECT l.* FROM links_fts fts
+                 JOIN links l ON l.rowid = fts.rowid
+                 WHERE links_fts MATCH ?1
+                 ORDER BY
+                    (fts.rank * -1.0) * 0.5 +
+                    (CASE WHEN l.visit_count > 0 THEN l.visit_count * 0.03 ELSE 0 END) +
+                    (CASE WHEN l.last_visited_at IS NOT NULL
+                        THEN (julianday('now') - julianday(l.last_visited_at)) * -0.004
+                        ELSE 0 END)
+                 DESC
+                 LIMIT 20",
+            )
+            .map_err(|e| e.to_string())?;
 
-    let fts_results: Vec<Link> = stmt
-        .query_map(params![fts_query], row_to_link)
-        .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
-        .collect();
+        let results: Vec<Link> = stmt
+            .query_map(params![fts_query], row_to_link)
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(results)
+    })();
 
-    if !fts_results.is_empty() {
-        return Ok(fts_results);
+    match fts_results {
+        Ok(results) if !results.is_empty() => return Ok(results),
+        _ => {} // FTS5失敗またはゼロ件 → LIKEフォールバック
     }
 
     // フォールバック: LIKE検索
@@ -286,7 +297,9 @@ pub fn search_links(
     let mut stmt = conn
         .prepare(
             "SELECT * FROM links
-             WHERE title LIKE ?1 OR url LIKE ?1 OR description LIKE ?1
+             WHERE title LIKE ?1 COLLATE NOCASE
+                OR url LIKE ?1 COLLATE NOCASE
+                OR description LIKE ?1 COLLATE NOCASE
              ORDER BY visit_count DESC, last_visited_at DESC
              LIMIT 20",
         )

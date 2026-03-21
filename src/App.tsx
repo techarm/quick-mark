@@ -87,16 +87,17 @@ function App() {
       if (searchQuery.trim()) {
         const results = await commands.searchLinks(searchQuery);
         setLinks(results);
-      } else if (activeFilter) {
-        const filter = activeFilter === 'all' ? undefined : activeFilter;
-        const results = await commands.getLinks(undefined, filter);
-        setLinks(results);
       } else if (activeCategoryId) {
         const results = await commands.getLinks(activeCategoryId);
+        setLinks(results);
+      } else {
+        const filter = activeFilter === 'all' ? undefined : activeFilter;
+        const results = await commands.getLinks(undefined, filter);
         setLinks(results);
       }
     } catch (err) {
       console.error('Failed to load links:', err);
+      setLinks([]);
     }
   }, [searchQuery, activeFilter, activeCategoryId]);
 
