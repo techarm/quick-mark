@@ -1,5 +1,4 @@
-import { LayoutGrid, List, Plus, Search } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { LayoutGrid, List, Plus, Search, X } from 'lucide-react';
 import { useUIStore } from '../../stores/ui.store';
 
 interface ToolbarProps {
@@ -13,25 +12,29 @@ export function Toolbar({ onAddLink, searchQuery, onSearchChange }: ToolbarProps
 
   return (
     <div
-      className="flex shrink-0 items-center gap-3 border-b px-4"
+      data-tauri-drag-region
+      className="flex shrink-0 items-center"
       style={{
         height: 'var(--toolbar-height)',
-        borderColor: 'var(--border-subtle)',
+        borderBottom: '1px solid var(--border-subtle)',
         background: 'var(--bg-surface)',
+        padding: '0 20px',
+        gap: '12px',
       }}
     >
-      {/* 検索 */}
+      {/* 検索バー */}
       <div
-        className="flex flex-1 items-center gap-2.5 rounded-lg px-3 py-2"
+        className="flex flex-1 items-center gap-2.5 rounded-lg px-3"
         style={{
+          height: '34px',
           background: 'var(--bg-input)',
-          border: '1px solid var(--border-subtle)',
+          border: '1px solid var(--border-medium)',
         }}
       >
         <Search size={15} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
         <input
           type="text"
-          placeholder="リンクを検索..."
+          placeholder="リンクを検索...  ⌘K"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           className="flex-1 bg-transparent text-[13px] outline-none"
@@ -41,49 +44,50 @@ export function Toolbar({ onAddLink, searchQuery, onSearchChange }: ToolbarProps
           <button
             type="button"
             onClick={() => onSearchChange('')}
-            className="rounded px-1 text-[10px]"
-            style={{ color: 'var(--text-tertiary)' }}
+            className="flex h-4 w-4 items-center justify-center rounded-full transition-colors"
+            style={{ background: 'var(--bg-elevated)', color: 'var(--text-tertiary)' }}
           >
-            ✕
+            <X size={10} />
           </button>
         )}
       </div>
 
       {/* 表示切替 */}
       <div
-        className="flex items-center gap-0.5 rounded-lg p-[3px]"
+        className="flex items-center rounded-lg p-[3px]"
         style={{
           background: 'var(--bg-elevated)',
           border: '1px solid var(--border-subtle)',
         }}
       >
-        <ViewButton active={viewMode === 'list'} onClick={() => setViewMode('list')}>
-          <List size={14} />
-        </ViewButton>
-        <ViewButton active={viewMode === 'card'} onClick={() => setViewMode('card')}>
-          <LayoutGrid size={14} />
-        </ViewButton>
+        <ViewToggle active={viewMode === 'list'} onClick={() => setViewMode('list')}>
+          <List size={15} />
+        </ViewToggle>
+        <ViewToggle active={viewMode === 'card'} onClick={() => setViewMode('card')}>
+          <LayoutGrid size={15} />
+        </ViewToggle>
       </div>
 
       {/* 追加ボタン */}
       <button
         type="button"
         onClick={onAddLink}
-        className="flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-[7px] text-[13px] font-medium transition-all duration-150 hover:brightness-110"
+        className="flex shrink-0 items-center gap-1.5 rounded-lg px-4 text-[13px] font-semibold transition-all duration-150"
         style={{
+          height: '34px',
           background: 'var(--accent-gradient)',
           color: 'var(--text-on-accent)',
-          boxShadow: '0 2px 8px rgba(226, 80, 80, 0.25)',
+          boxShadow: 'var(--shadow-glow-accent)',
         }}
       >
-        <Plus size={14} strokeWidth={2.5} />
-        追加
+        <Plus size={15} strokeWidth={2.5} />
+        <span>追加</span>
       </button>
     </div>
   );
 }
 
-function ViewButton({
+function ViewToggle({
   active,
   onClick,
   children,
@@ -96,11 +100,12 @@ function ViewButton({
     <button
       type="button"
       onClick={onClick}
-      className={cn('rounded-md p-1.5 transition-all duration-150')}
+      className="flex items-center justify-center rounded-md transition-all duration-150"
       style={{
-        background: active ? 'var(--accent-subtle)' : 'transparent',
+        width: '28px',
+        height: '28px',
+        background: active ? 'var(--bg-active)' : 'transparent',
         color: active ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-        boxShadow: active ? 'var(--shadow-sm)' : 'none',
       }}
     >
       {children}

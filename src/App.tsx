@@ -138,19 +138,25 @@ function App() {
 
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--bg-base)' }}>
-      <TitleBar />
-
       <div className="flex flex-1 overflow-hidden">
-        {/* サイドバー */}
+        {/* サイドバー（タイトル含む） */}
         <aside
-          className="glass-surface flex w-[var(--sidebar-width)] shrink-0 flex-col border-r"
-          style={{ borderColor: 'var(--border-subtle)' }}
+          className="flex shrink-0 flex-col"
+          style={{
+            width: 'var(--sidebar-width)',
+            background: 'var(--bg-sidebar)',
+            borderRight: '1px solid var(--border-medium)',
+          }}
         >
+          <TitleBar />
           <Sidebar categories={categories} linkCounts={linkCounts} />
         </aside>
 
-        {/* メインコンテンツ */}
-        <main className="flex flex-1 flex-col overflow-hidden">
+        {/* メインエリア */}
+        <main
+          className="flex flex-1 flex-col overflow-hidden"
+          style={{ background: 'var(--bg-base)' }}
+        >
           <Toolbar
             onAddLink={() => setAddDialogOpen(true)}
             searchQuery={searchQuery}

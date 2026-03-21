@@ -1,6 +1,5 @@
-import { Clock, FolderOpen, Globe, Hourglass, Timer } from 'lucide-react';
+import { Clock, FolderOpen, Globe, Hourglass, Plus, Timer } from 'lucide-react';
 import type { Category, SmartFilter } from '../../lib/types';
-import { cn } from '../../lib/utils';
 import { useUIStore } from '../../stores/ui.store';
 
 interface SidebarProps {
@@ -42,50 +41,37 @@ export function Sidebar({ categories, linkCounts }: SidebarProps) {
   const getChildren = (parentId: string) => categories.filter((c) => c.parent_id === parentId);
 
   return (
-    <div className="flex h-full flex-col px-3 pt-2 pb-3">
+    <div className="flex flex-1 flex-col overflow-hidden px-3 pb-3">
       {/* スマートフォルダ */}
-      <div className="mb-3">
+      <div className="mb-1">
         <SectionHeader>スマートフォルダ</SectionHeader>
-        <nav className="space-y-[2px]">
+        <nav className="flex flex-col gap-[1px]">
           {smartFilters.map((filter) => {
-            const isActive = activeFilter === filter.id;
+            const isActive = activeFilter === filter.id && !activeCategoryId;
+            const count = getCount(filter.id);
             return (
               <button
                 key={filter.id}
                 type="button"
                 onClick={() => setActiveFilter(filter.id)}
-                className={cn(
-                  'group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-left text-[13px] transition-all duration-150',
-                  isActive ? 'font-medium' : 'font-normal',
-                )}
-                style={{
-                  background: isActive ? 'var(--accent-subtle)' : 'transparent',
-                  color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)';
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) e.currentTarget.style.background = 'transparent';
-                }}
+                className="sidebar-item"
+                style={
+                  isActive
+                    ? {
+                        background: 'var(--bg-active)',
+                        color: 'var(--accent-primary)',
+                        fontWeight: 500,
+                      }
+                    : undefined
+                }
               >
                 <filter.icon
-                  size={16}
-                  strokeWidth={isActive ? 2 : 1.5}
-                  style={{ opacity: isActive ? 0.9 : 0.5 }}
+                  size={17}
+                  strokeWidth={isActive ? 2.2 : 1.6}
+                  style={{ opacity: isActive ? 1 : 0.5, flexShrink: 0 }}
                 />
-                <span className="flex-1">{filter.label}</span>
-                {getCount(filter.id) > 0 && (
-                  <span
-                    className="min-w-[20px] rounded-full px-1.5 py-[1px] text-center text-[10px] tabular-nums"
-                    style={{
-                      background: isActive ? 'rgba(226, 80, 80, 0.15)' : 'var(--bg-elevated)',
-                      color: isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                    }}
-                  >
-                    {getCount(filter.id)}
-                  </span>
-                )}
+                <span className="flex-1 truncate">{filter.label}</span>
+                {count > 0 && <CountBadge active={isActive}>{count}</CountBadge>}
               </button>
             );
           })}
@@ -93,20 +79,35 @@ export function Sidebar({ categories, linkCounts }: SidebarProps) {
       </div>
 
       {/* 区切り線 */}
-      <div className="mx-2 mb-3" style={{ borderBottom: '1px solid var(--border-subtle)' }} />
+      <div className="mx-2 my-2" style={{ borderBottom: '1px solid var(--border-subtle)' }} />
 
-      {/* カテゴリツリー */}
-      <div className="flex-1 overflow-y-auto">
-        <SectionHeader>カテゴリ</SectionHeader>
+      {/* カテゴリ */}
+      <div className="flex flex-1 flex-col overflow-y-auto">
+        <div className="flex items-center justify-between pr-1">
+          <SectionHeader>カテゴリ</SectionHeader>
+          <button
+            type="button"
+            className="flex h-5 w-5 items-center justify-center rounded transition-colors"
+            style={{ color: 'var(--text-tertiary)' }}
+            title="カテゴリを追加"
+          >
+            <Plus size={13} strokeWidth={2} />
+          </button>
+        </div>
         {rootCategories.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-6">
-            <FolderOpen size={24} style={{ color: 'var(--text-tertiary)', opacity: 0.4 }} />
-            <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 pb-8">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-xl"
+              style={{ background: 'var(--bg-elevated)' }}
+            >
+              <FolderOpen size={20} style={{ color: 'var(--text-tertiary)', opacity: 0.5 }} />
+            </div>
+            <p className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>
               カテゴリがありません
             </p>
           </div>
         ) : (
-          <nav className="space-y-[2px]">
+          <nav className="flex flex-col gap-[1px]">
             {rootCategories.map((cat) => (
               <CategoryItem
                 key={cat.id}
@@ -128,11 +129,26 @@ export function Sidebar({ categories, linkCounts }: SidebarProps) {
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
     <h2
-      className="mb-1.5 px-2.5 text-[10px] font-bold uppercase tracking-[0.12em]"
+      className="mb-1 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em]"
       style={{ color: 'var(--text-tertiary)' }}
     >
       {children}
     </h2>
+  );
+}
+
+function CountBadge({ active, children }: { active: boolean; children: React.ReactNode }) {
+  return (
+    <span
+      className="min-w-[22px] rounded-[5px] px-[6px] py-[1px] text-center text-[11px] tabular-nums"
+      style={{
+        background: active ? 'rgba(226, 80, 80, 0.18)' : 'rgba(255, 200, 200, 0.06)',
+        color: active ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+        fontWeight: active ? 600 : 400,
+      }}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -158,39 +174,31 @@ function CategoryItem({
       <button
         type="button"
         onClick={() => onSelect(category.id)}
-        className={cn(
-          'group flex w-full items-center gap-2.5 rounded-lg py-[7px] text-left text-[13px] transition-all duration-150',
-          active ? 'font-medium' : 'font-normal',
-        )}
+        className="sidebar-item"
         style={{
-          paddingLeft: `${10 + depth * 18}px`,
-          paddingRight: '10px',
-          background: active ? 'var(--accent-subtle)' : 'transparent',
-          color: active ? 'var(--accent-primary)' : 'var(--text-secondary)',
-        }}
-        onMouseEnter={(e) => {
-          if (!active) e.currentTarget.style.background = 'var(--bg-hover)';
-        }}
-        onMouseLeave={(e) => {
-          if (!active) e.currentTarget.style.background = 'transparent';
+          paddingLeft: `${12 + depth * 20}px`,
+          ...(active
+            ? {
+                background: 'var(--bg-active)',
+                color: 'var(--accent-primary)',
+                fontWeight: 500,
+              }
+            : {}),
         }}
       >
-        <FolderOpen size={15} style={{ color: category.color, opacity: active ? 0.9 : 0.6 }} />
+        <FolderOpen
+          size={16}
+          style={{
+            color: category.color || 'var(--text-tertiary)',
+            opacity: active ? 1 : 0.6,
+            flexShrink: 0,
+          }}
+        />
         <span className="flex-1 truncate">{category.name}</span>
-        {category.link_count > 0 && (
-          <span
-            className="min-w-[20px] rounded-full px-1.5 py-[1px] text-center text-[10px] tabular-nums"
-            style={{
-              background: active ? 'rgba(226, 80, 80, 0.15)' : 'var(--bg-elevated)',
-              color: active ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-            }}
-          >
-            {category.link_count}
-          </span>
-        )}
+        {category.link_count > 0 && <CountBadge active={active}>{category.link_count}</CountBadge>}
       </button>
       {childCategories.length > 0 && (
-        <div className="space-y-[2px]">
+        <div className="flex flex-col gap-[1px]">
           {childCategories.map((child) => (
             <CategoryItem
               key={child.id}

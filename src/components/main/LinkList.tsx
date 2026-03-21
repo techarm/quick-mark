@@ -14,21 +14,56 @@ export function LinkList({ links, onOpen }: LinkListProps) {
   if (links.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <div className="text-center">
+        <div className="flex flex-col items-center gap-4">
+          {/* アイコン */}
           <div
-            className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl"
-            style={{ background: 'var(--bg-elevated)' }}
+            className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl"
+            style={{
+              background: 'linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-surface) 100%)',
+              border: '1px solid var(--border-subtle)',
+              boxShadow: 'inset 0 1px 0 rgba(255, 200, 200, 0.04)',
+            }}
           >
-            <ExternalLink size={28} style={{ color: 'var(--text-tertiary)', opacity: 0.5 }} />
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              role="img"
+              aria-label="リンクアイコン"
+              style={{ color: 'var(--text-tertiary)', opacity: 0.6 }}
+            >
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
           </div>
-          <p className="text-[15px] font-medium" style={{ color: 'var(--text-secondary)' }}>
-            リンクがありません
-          </p>
-          <p className="mt-1.5 text-[13px]" style={{ color: 'var(--text-tertiary)' }}>
-            「追加」ボタンまたは Cmd+Shift+A で
-            <br />
-            リンクを追加して整理を始めましょう
-          </p>
+          {/* テキスト */}
+          <div className="text-center">
+            <p className="text-[15px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+              リンクがありません
+            </p>
+            <p
+              className="mt-1.5 text-[13px] leading-relaxed"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              右上の「追加」ボタンまたは
+              <kbd
+                className="mx-1 inline-block rounded px-1.5 py-0.5 text-[11px] font-medium"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                ⌘⇧A
+              </kbd>
+              で追加
+            </p>
+          </div>
         </div>
       </div>
     );
