@@ -24,6 +24,8 @@ body {
   color: var(--text-primary);
   background: var(--bg-base);
   user-select: none;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 /* === すりガラス効果 === */
@@ -54,35 +56,36 @@ body {
 /* === カード === */
 
 .card-gradient {
-  box-shadow: inset 0 1px 0 rgba(255, 200, 200, 0.03);
-  background: linear-gradient(180deg, rgba(38, 28, 28, 0.82) 0%, rgba(24, 18, 18, 0.78) 100%);
+  box-shadow: var(--shadow-inset-glow);
+  background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-surface) 100%);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   transition:
     border-color 200ms ease,
-    box-shadow 200ms ease;
+    box-shadow 200ms ease,
+    transform 200ms ease;
 }
 
 .card-gradient:hover {
   border-color: var(--border-hover);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 200, 200, 0.05),
-    var(--shadow-sm);
+  box-shadow: var(--shadow-inset-glow), var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
 /* === URL表示 === */
 
 .url-text {
   font-family: var(--font-mono);
-  font-size: 0.85em;
-  color: var(--text-secondary);
+  font-size: 0.8em;
+  color: var(--text-tertiary);
+  letter-spacing: -0.02em;
 }
 
 /* === スクロールバー === */
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -90,12 +93,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 200, 200, 0.1);
+  background: rgba(255, 200, 200, 0.08);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 200, 200, 0.2);
+  background: rgba(255, 200, 200, 0.16);
 }
 
 /* === 選択ハイライト === */
@@ -116,4 +119,29 @@ body {
 :focus-visible {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
+}
+
+/* === 入力フィールド === */
+
+.input-field {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  outline: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.input-field:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(226, 80, 80, 0.1);
+}
+
+.input-field::placeholder {
+  color: var(--text-tertiary);
 }

@@ -15,10 +15,18 @@ export function LinkList({ links, onOpen }: LinkListProps) {
     return (
       <div className="flex flex-1 items-center justify-center">
         <div className="text-center">
-          <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>
+          <div
+            className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl"
+            style={{ background: 'var(--bg-elevated)' }}
+          >
+            <ExternalLink size={28} style={{ color: 'var(--text-tertiary)', opacity: 0.5 }} />
+          </div>
+          <p className="text-[15px] font-medium" style={{ color: 'var(--text-secondary)' }}>
             リンクがありません
           </p>
-          <p className="mt-1 text-sm" style={{ color: 'var(--text-tertiary)' }}>
+          <p className="mt-1.5 text-[13px]" style={{ color: 'var(--text-tertiary)' }}>
+            「追加」ボタンまたは Cmd+Shift+A で
+            <br />
             リンクを追加して整理を始めましょう
           </p>
         </div>

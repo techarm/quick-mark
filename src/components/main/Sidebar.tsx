@@ -38,62 +38,75 @@ export function Sidebar({ categories, linkCounts }: SidebarProps) {
     }
   };
 
-  // カテゴリをツリー構造に変換
   const rootCategories = categories.filter((c) => !c.parent_id);
   const getChildren = (parentId: string) => categories.filter((c) => c.parent_id === parentId);
 
   return (
-    <div className="flex h-full flex-col p-3">
+    <div className="flex h-full flex-col px-3 pt-2 pb-3">
       {/* スマートフォルダ */}
-      <div className="mb-4">
-        <h2
-          className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest"
-          style={{ color: 'var(--text-tertiary)' }}
-        >
-          スマートフォルダ
-        </h2>
-        <nav className="space-y-0.5">
-          {smartFilters.map((filter) => (
-            <button
-              key={filter.id}
-              type="button"
-              onClick={() => setActiveFilter(filter.id)}
-              className={cn(
-                'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-all duration-150',
-              )}
-              style={{
-                background: activeFilter === filter.id ? 'var(--accent-subtle)' : 'transparent',
-                color:
-                  activeFilter === filter.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
-              }}
-            >
-              <filter.icon size={15} style={{ opacity: 0.7 }} />
-              <span className="flex-1">{filter.label}</span>
-              <span className="text-xs tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
-                {getCount(filter.id)}
-              </span>
-            </button>
-          ))}
+      <div className="mb-3">
+        <SectionHeader>スマートフォルダ</SectionHeader>
+        <nav className="space-y-[2px]">
+          {smartFilters.map((filter) => {
+            const isActive = activeFilter === filter.id;
+            return (
+              <button
+                key={filter.id}
+                type="button"
+                onClick={() => setActiveFilter(filter.id)}
+                className={cn(
+                  'group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-left text-[13px] transition-all duration-150',
+                  isActive ? 'font-medium' : 'font-normal',
+                )}
+                style={{
+                  background: isActive ? 'var(--accent-subtle)' : 'transparent',
+                  color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <filter.icon
+                  size={16}
+                  strokeWidth={isActive ? 2 : 1.5}
+                  style={{ opacity: isActive ? 0.9 : 0.5 }}
+                />
+                <span className="flex-1">{filter.label}</span>
+                {getCount(filter.id) > 0 && (
+                  <span
+                    className="min-w-[20px] rounded-full px-1.5 py-[1px] text-center text-[10px] tabular-nums"
+                    style={{
+                      background: isActive ? 'rgba(226, 80, 80, 0.15)' : 'var(--bg-elevated)',
+                      color: isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                    }}
+                  >
+                    {getCount(filter.id)}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </nav>
       </div>
 
       {/* 区切り線 */}
-      <div className="mx-2 mb-3 border-b" style={{ borderColor: 'var(--border-subtle)' }} />
+      <div className="mx-2 mb-3" style={{ borderBottom: '1px solid var(--border-subtle)' }} />
 
       {/* カテゴリツリー */}
       <div className="flex-1 overflow-y-auto">
-        <h2
-          className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest"
-          style={{ color: 'var(--text-tertiary)' }}
-        >
-          カテゴリ
-        </h2>
+        <SectionHeader>カテゴリ</SectionHeader>
         {rootCategories.length === 0 ? (
-          <p className="px-2 text-xs italic" style={{ color: 'var(--text-tertiary)' }}>
-            カテゴリがありません
-          </p>
+          <div className="flex flex-col items-center gap-2 py-6">
+            <FolderOpen size={24} style={{ color: 'var(--text-tertiary)', opacity: 0.4 }} />
+            <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+              カテゴリがありません
+            </p>
+          </div>
         ) : (
-          <nav className="space-y-0.5">
+          <nav className="space-y-[2px]">
             {rootCategories.map((cat) => (
               <CategoryItem
                 key={cat.id}
@@ -109,6 +122,17 @@ export function Sidebar({ categories, linkCounts }: SidebarProps) {
         )}
       </div>
     </div>
+  );
+}
+
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <h2
+      className="mb-1.5 px-2.5 text-[10px] font-bold uppercase tracking-[0.12em]"
+      style={{ color: 'var(--text-tertiary)' }}
+    >
+      {children}
+    </h2>
   );
 }
 
@@ -135,23 +159,38 @@ function CategoryItem({
         type="button"
         onClick={() => onSelect(category.id)}
         className={cn(
-          'flex w-full items-center gap-2 rounded-md py-1.5 text-left text-sm transition-all duration-150',
+          'group flex w-full items-center gap-2.5 rounded-lg py-[7px] text-left text-[13px] transition-all duration-150',
+          active ? 'font-medium' : 'font-normal',
         )}
         style={{
-          paddingLeft: `${8 + depth * 16}px`,
-          paddingRight: '8px',
+          paddingLeft: `${10 + depth * 18}px`,
+          paddingRight: '10px',
           background: active ? 'var(--accent-subtle)' : 'transparent',
           color: active ? 'var(--accent-primary)' : 'var(--text-secondary)',
         }}
+        onMouseEnter={(e) => {
+          if (!active) e.currentTarget.style.background = 'var(--bg-hover)';
+        }}
+        onMouseLeave={(e) => {
+          if (!active) e.currentTarget.style.background = 'transparent';
+        }}
       >
-        <FolderOpen size={15} style={{ color: category.color, opacity: 0.8 }} />
+        <FolderOpen size={15} style={{ color: category.color, opacity: active ? 0.9 : 0.6 }} />
         <span className="flex-1 truncate">{category.name}</span>
-        <span className="text-xs tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
-          {category.link_count}
-        </span>
+        {category.link_count > 0 && (
+          <span
+            className="min-w-[20px] rounded-full px-1.5 py-[1px] text-center text-[10px] tabular-nums"
+            style={{
+              background: active ? 'rgba(226, 80, 80, 0.15)' : 'var(--bg-elevated)',
+              color: active ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+            }}
+          >
+            {category.link_count}
+          </span>
+        )}
       </button>
       {childCategories.length > 0 && (
-        <div className="space-y-0.5">
+        <div className="space-y-[2px]">
           {childCategories.map((child) => (
             <CategoryItem
               key={child.id}
