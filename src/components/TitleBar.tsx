@@ -1,7 +1,19 @@
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Minus, Square, X } from 'lucide-react';
 
-const appWindow = getCurrentWindow();
+async function minimizeWindow() {
+  const { getCurrentWindow } = await import('@tauri-apps/api/window');
+  getCurrentWindow().minimize();
+}
+
+async function toggleMaximizeWindow() {
+  const { getCurrentWindow } = await import('@tauri-apps/api/window');
+  getCurrentWindow().toggleMaximize();
+}
+
+async function closeWindow() {
+  const { getCurrentWindow } = await import('@tauri-apps/api/window');
+  getCurrentWindow().close();
+}
 
 export function TitleBar() {
   return (
@@ -37,21 +49,21 @@ export function TitleBar() {
       <div className="hidden items-center gap-1 windows:flex">
         <button
           type="button"
-          onClick={() => appWindow.minimize()}
+          onClick={minimizeWindow}
           className="flex h-6 w-6 items-center justify-center rounded transition-colors hover:bg-white/10"
         >
           <Minus size={12} style={{ color: 'var(--text-secondary)' }} />
         </button>
         <button
           type="button"
-          onClick={() => appWindow.toggleMaximize()}
+          onClick={toggleMaximizeWindow}
           className="flex h-6 w-6 items-center justify-center rounded transition-colors hover:bg-white/10"
         >
           <Square size={10} style={{ color: 'var(--text-secondary)' }} />
         </button>
         <button
           type="button"
-          onClick={() => appWindow.close()}
+          onClick={closeWindow}
           className="flex h-6 w-6 items-center justify-center rounded transition-colors hover:bg-red-500/80"
         >
           <X size={12} style={{ color: 'var(--text-secondary)' }} />

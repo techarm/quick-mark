@@ -1,4 +1,15 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke as tauriInvoke } from '@tauri-apps/api/core';
+
+// ブラウザ環境ではTauri APIが使えないため安全にラップ
+async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  try {
+    return await tauriInvoke<T>(cmd, args);
+  } catch (e) {
+    console.warn(`Tauri invoke '${cmd}' failed (running in browser?):`, e);
+    throw e;
+  }
+}
+
 import type {
   Category,
   CreateCategoryInput,

@@ -32,7 +32,8 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
       setState('parsing');
       setError(null);
 
-      const filePath = typeof selected === 'string' ? selected : (selected as { path: string }).path;
+      const filePath =
+        typeof selected === 'string' ? selected : (selected as { path: string }).path;
       const content = await readTextFile(filePath);
       const parsed = await commands.parseBookmarksHtml(content);
       setItems(parsed);

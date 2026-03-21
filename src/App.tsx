@@ -1,4 +1,14 @@
-import { openUrl } from '@tauri-apps/plugin-opener';
+// openUrl を動的インポートで安全に呼び出す
+async function safeOpenUrl(url: string) {
+  try {
+    const { openUrl } = await import('@tauri-apps/plugin-opener');
+    await openUrl(url);
+  } catch {
+    // ブラウザ環境ではwindow.openにフォールバック
+    window.open(url, '_blank');
+  }
+}
+
 import { useCallback, useEffect, useState } from 'react';
 import { ImportDialog } from './components/ImportDialog';
 import { AddLinkDialog } from './components/main/AddLinkDialog';
@@ -91,7 +101,7 @@ function App() {
     async (link: Link) => {
       try {
         const url = await commands.openLink(link.id);
-        await openUrl(url);
+        await safeOpenUrl(url);
         loadLinks();
       } catch (err) {
         console.error('Failed to open link:', err);
