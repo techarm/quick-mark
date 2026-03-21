@@ -18,11 +18,22 @@
         "width": 1100,
         "height": 700,
         "minWidth": 800,
-        "minHeight": 500,
-        "decorations": true,
-        "transparent": false,
-        "titleBarStyle": "Overlay",
-        "hiddenTitle": true
+        "minHeight": 500
+      },
+      {
+        "label": "search-palette",
+        "url": "index.html?window=search",
+        "title": "QuickMark Search",
+        "width": 640,
+        "height": 172,
+        "center": true,
+        "decorations": false,
+        "transparent": true,
+        "shadow": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "resizable": false
       }
     ],
     "security": {

@@ -34,7 +34,7 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
   }, []);
 
   // URL入力後のフォーカスアウトで自動取得
-  const handleUrlBlur = useCallback(async () => {
+  const handleUrlBlur = useCallback(() => {
     const trimmed = url.trim();
     if (!trimmed || lastFetchedUrl.current === trimmed) return;
     if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return;
@@ -42,30 +42,26 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
     lastFetchedUrl.current = trimmed;
     setFetching(true);
 
-    try {
-      const info = await commands.fetchUrlInfo(trimmed);
-      if (info.title && !title.trim()) {
-        setTitle(info.title);
-      }
-      if (info.description && !description.trim()) {
-        setDescription(info.description);
-      }
-      if (info.favicon_url) {
-        setFaviconUrl(info.favicon_url);
-      }
-    } catch (err) {
-      console.warn('URL info fetch failed, using fallback:', err);
-      // フォールバック: ドメインからfavicon URLを生成
-      try {
-        const domain = new URL(trimmed).hostname;
-        if (!title.trim()) setTitle(domain);
-        setFaviconUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=32`);
-      } catch {
-        // URL解析失敗
-      }
-    } finally {
-      setFetching(false);
-    }
+    // requestAnimationFrameでローディング表示を先にレンダリングしてから取得開始
+    requestAnimationFrame(() => {
+      commands
+        .fetchUrlInfo(trimmed)
+        .then((info) => {
+          if (info.title && !title.trim()) setTitle(info.title);
+          if (info.description && !description.trim()) setDescription(info.description);
+          if (info.favicon_url) setFaviconUrl(info.favicon_url);
+        })
+        .catch(() => {
+          try {
+            const domain = new URL(trimmed).hostname;
+            if (!title.trim()) setTitle(domain);
+            setFaviconUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=32`);
+          } catch {
+            // URL解析失敗
+          }
+        })
+        .finally(() => setFetching(false));
+    });
   }, [url, title, description]);
 
   const handleSubmit = (e: React.FormEvent) => {

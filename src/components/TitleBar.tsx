@@ -1,11 +1,10 @@
 export function TitleBar() {
   return (
     <div
-      data-tauri-drag-region
       className="flex shrink-0 items-center"
       style={{
         height: 'var(--titlebar-height)',
-        paddingLeft: '78px',
+        paddingLeft: '16px',
         paddingRight: '12px',
       }}
     >

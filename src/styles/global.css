@@ -18,6 +18,15 @@ body,
   overflow: hidden;
 }
 
+/* 透明ウィンドウ（検索パレット用） */
+html.transparent-window,
+html.transparent-window body,
+html.transparent-window #root {
+  background: transparent !important;
+  height: auto !important;
+  overflow: hidden !important;
+}
+
 body {
   font-family: var(--font-sans);
   font-feature-settings: "palt" 1;

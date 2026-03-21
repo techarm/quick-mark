@@ -4,8 +4,14 @@ import App from './App';
 import { SearchWindow } from './SearchWindow';
 import './styles/global.css';
 
-// パスベースでルーティング（/search → 検索ウィンドウ、それ以外 → メインアプリ）
-const isSearchWindow = window.location.pathname === '/search';
+// URLパラメータまたはパスで検索ウィンドウを判別
+const params = new URLSearchParams(window.location.search);
+const isSearchWindow = params.get('window') === 'search' || window.location.pathname === '/search';
+
+// 検索ウィンドウの場合は背景を透明に
+if (isSearchWindow) {
+  document.documentElement.classList.add('transparent-window');
+}
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>{isSearchWindow ? <SearchWindow /> : <App />}</React.StrictMode>,

@@ -1,8 +1,15 @@
 import { Command } from 'cmdk';
 import { ExternalLink, Pin, Search, Timer } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as commands from './lib/commands';
 import type { Link } from './lib/types';
+
+const ITEM_HEIGHT = 52;
+const HEADER_HEIGHT = 52;
+const FOOTER_HEIGHT = 40;
+const EMPTY_HEIGHT = 80;
+const MAX_VISIBLE_ITEMS = 7;
+const PADDING = 16; // リスト上下パディング
 
 async function safeOpenUrl(url: string) {
   try {
@@ -66,6 +73,27 @@ export function SearchWindow() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [query, doSearch]);
 
+  // 結果件数に応じてウィンドウサイズを調整
+  const listHeight = useMemo(() => {
+    if (results.length === 0) return EMPTY_HEIGHT;
+    const itemsToShow = Math.min(results.length, MAX_VISIBLE_ITEMS);
+    return itemsToShow * ITEM_HEIGHT + PADDING;
+  }, [results.length]);
+
+  const totalHeight = HEADER_HEIGHT + listHeight + FOOTER_HEIGHT;
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        const win = getCurrentWindow();
+        await win.setSize(new (await import('@tauri-apps/api/dpi')).LogicalSize(640, totalHeight));
+      } catch {
+        // ブラウザ環境では無視
+      }
+    })();
+  }, [totalHeight]);
+
   // ウィンドウがフォーカスを失ったら非表示にする
   useEffect(() => {
     const handleBlur = () => {
@@ -109,15 +137,12 @@ export function SearchWindow() {
     <div
       style={{
         width: '100%',
-        height: '100vh',
         display: 'flex',
         flexDirection: 'column',
         background: 'var(--bg-overlay)',
-        borderRadius: 12,
+        borderRadius: 10,
         overflow: 'hidden',
         border: '1px solid var(--border-medium)',
-        boxShadow:
-          '0 0 0 1px rgba(255,255,255,0.04), 0 24px 48px rgba(0,0,0,0.5), 0 8px 16px rgba(0,0,0,0.3)',
       }}
     >
       <Command shouldFilter={false} onKeyDown={handleKeyDown}>
@@ -165,9 +190,10 @@ export function SearchWindow() {
         {/* 結果リスト */}
         <Command.List
           style={{
-            flex: 1,
+            height: listHeight,
             overflow: 'auto',
             padding: 8,
+            transition: 'height 150ms ease',
           }}
         >
           <Command.Empty>

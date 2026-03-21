@@ -29,35 +29,19 @@ import type {
 } from './lib/types';
 import { useUIStore } from './stores/ui.store';
 
-// 独立検索ウィンドウのトグル
+// 独立検索ウィンドウのトグル（tauri.conf.jsonで事前定義済み）
 async function toggleSearchWindow() {
   try {
     const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+    const win = await WebviewWindow.getByLabel('search-palette');
+    if (!win) return;
 
-    const existing = await WebviewWindow.getByLabel('search-palette');
-    if (existing) {
-      const visible = await existing.isVisible();
-      if (visible) {
-        await existing.hide();
-      } else {
-        await existing.show();
-        await existing.setFocus();
-      }
+    const visible = await win.isVisible();
+    if (visible) {
+      await win.hide();
     } else {
-      // 新しい検索ウィンドウを作成
-      new WebviewWindow('search-palette', {
-        url: '/search',
-        title: 'QuickMark Search',
-        width: 640,
-        height: 460,
-        center: true,
-        decorations: false,
-        transparent: true,
-        alwaysOnTop: true,
-        skipTaskbar: true,
-        resizable: false,
-        focus: true,
-      });
+      await win.show();
+      await win.setFocus();
     }
   } catch (err) {
     console.error('Failed to toggle search window:', err);
