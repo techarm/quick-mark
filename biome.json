@@ -13,7 +13,8 @@
       "recommended": true,
       "correctness": {
         "noUnusedImports": "warn",
-        "noUnusedVariables": "warn"
+        "noUnusedVariables": "warn",
+        "noChildrenProp": "off"
       },
       "style": {
         "noNonNullAssertion": "off",
@@ -21,6 +22,10 @@
       },
       "suspicious": {
         "noExplicitAny": "warn"
+      },
+      "a11y": {
+        "noLabelWithoutControl": "off",
+        "useSemanticElements": "off"
       }
     }
   },

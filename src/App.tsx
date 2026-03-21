@@ -1,99 +1,139 @@
+import { openUrl } from '@tauri-apps/plugin-opener';
+import { useCallback, useEffect, useState } from 'react';
+import { AddLinkDialog } from './components/main/AddLinkDialog';
+import { LinkDetail } from './components/main/LinkDetail';
+import { LinkList } from './components/main/LinkList';
+import { Sidebar } from './components/main/Sidebar';
+import { Toolbar } from './components/main/Toolbar';
 import { TitleBar } from './components/TitleBar';
+import * as commands from './lib/commands';
+import type { Category, CreateLinkInput, Link } from './lib/types';
+import { useUIStore } from './stores/ui.store';
 
 function App() {
+  const [links, setLinks] = useState<Link[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  const { activeFilter, activeCategoryId, selectedLinkId, detailPanelOpen } = useUIStore();
+
+  // データの読み込み
+  const loadLinks = useCallback(async () => {
+    try {
+      if (searchQuery.trim()) {
+        const results = await commands.searchLinks(searchQuery);
+        setLinks(results);
+      } else if (activeFilter) {
+        const filter = activeFilter === 'all' ? undefined : activeFilter;
+        const results = await commands.getLinks(undefined, filter);
+        setLinks(results);
+      } else if (activeCategoryId) {
+        const results = await commands.getLinks(activeCategoryId);
+        setLinks(results);
+      }
+    } catch (err) {
+      console.error('Failed to load links:', err);
+    }
+  }, [searchQuery, activeFilter, activeCategoryId]);
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const cats = await commands.getCategories();
+      setCategories(cats);
+    } catch (err) {
+      console.error('Failed to load categories:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLinks();
+  }, [loadLinks]);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  // 起動時に期限切れリンクをクリーンアップ
+  useEffect(() => {
+    commands.cleanupExpiredLinks().catch(console.error);
+  }, []);
+
+  // リンクを開く
+  const handleOpenLink = useCallback(
+    async (link: Link) => {
+      try {
+        const url = await commands.openLink(link.id);
+        await openUrl(url);
+        loadLinks();
+      } catch (err) {
+        console.error('Failed to open link:', err);
+      }
+    },
+    [loadLinks],
+  );
+
+  // リンクを追加
+  const handleAddLink = useCallback(
+    async (input: CreateLinkInput) => {
+      try {
+        await commands.createLink(input);
+        loadLinks();
+        loadCategories();
+      } catch (err) {
+        console.error('Failed to create link:', err);
+      }
+    },
+    [loadLinks, loadCategories],
+  );
+
+  // リンクカウントを計算
+  const linkCounts = {
+    all: links.length,
+    recent: links.length,
+    temporary: links.filter((l) => l.is_temporary).length,
+    expired: links.filter(
+      (l) => l.is_temporary && l.expires_at && new Date(l.expires_at) < new Date(),
+    ).length,
+  };
+
+  const selectedLink = links.find((l) => l.id === selectedLinkId) ?? null;
+
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--bg-base)' }}>
       <TitleBar />
+
       <div className="flex flex-1 overflow-hidden">
         {/* サイドバー */}
         <aside
-          className="glass-surface flex w-[var(--sidebar-width)] flex-col border-r"
+          className="glass-surface flex w-[var(--sidebar-width)] shrink-0 flex-col border-r"
           style={{ borderColor: 'var(--border-subtle)' }}
         >
-          <div className="flex-1 p-3">
-            <div className="mb-4">
-              <h2
-                className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest"
-                style={{ color: 'var(--text-tertiary)' }}
-              >
-                スマートフォルダ
-              </h2>
-              <nav className="space-y-0.5">
-                <SidebarItem label="すべてのリンク" count={0} active />
-                <SidebarItem label="最近追加" count={0} />
-                <SidebarItem label="一時リンク" count={0} />
-                <SidebarItem label="期限切れ" count={0} />
-              </nav>
-            </div>
-            <div>
-              <h2
-                className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest"
-                style={{ color: 'var(--text-tertiary)' }}
-              >
-                カテゴリ
-              </h2>
-              <p className="px-2 text-xs italic" style={{ color: 'var(--text-tertiary)' }}>
-                カテゴリがありません
-              </p>
-            </div>
-          </div>
+          <Sidebar categories={categories} linkCounts={linkCounts} />
         </aside>
 
         {/* メインコンテンツ */}
         <main className="flex flex-1 flex-col overflow-hidden">
-          <div
-            className="flex items-center gap-2 border-b px-4 py-2"
-            style={{ borderColor: 'var(--border-subtle)' }}
-          >
-            <div
-              className="flex flex-1 items-center gap-2 rounded-md px-3 py-1.5 text-sm"
-              style={{
-                background: 'var(--bg-input)',
-                color: 'var(--text-tertiary)',
-              }}
-            >
-              リンクを検索...
-            </div>
-          </div>
-          <div className="flex flex-1 items-center justify-center">
-            <div className="text-center">
-              <p className="text-lg font-medium" style={{ color: 'var(--text-secondary)' }}>
-                リンクがありません
-              </p>
-              <p className="mt-1 text-sm" style={{ color: 'var(--text-tertiary)' }}>
-                リンクを追加して整理を始めましょう
-              </p>
-            </div>
-          </div>
+          <Toolbar
+            onAddLink={() => setAddDialogOpen(true)}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
+          <LinkList links={links} onOpen={handleOpenLink} />
         </main>
-      </div>
-    </div>
-  );
-}
 
-function SidebarItem({
-  label,
-  count,
-  active = false,
-}: {
-  label: string;
-  count: number;
-  active?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm transition-colors"
-      style={{
-        background: active ? 'var(--accent-subtle)' : 'transparent',
-        color: active ? 'var(--accent-primary)' : 'var(--text-secondary)',
-      }}
-    >
-      <span>{label}</span>
-      <span className="text-xs tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
-        {count}
-      </span>
-    </button>
+        {/* 詳細パネル */}
+        {detailPanelOpen && <LinkDetail link={selectedLink} onOpen={handleOpenLink} />}
+      </div>
+
+      {/* リンク追加ダイアログ */}
+      <AddLinkDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        categories={categories}
+        onSubmit={handleAddLink}
+      />
+    </div>
   );
 }
 
