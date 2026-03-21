@@ -6,6 +6,7 @@ use tauri::Manager;
 
 use commands::browser::*;
 use commands::categories::*;
+use commands::import::*;
 use commands::links::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -14,6 +15,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             let db_path = db::get_db_path(&app.handle());
             let app_db = db::init_db(&db_path).expect("Failed to initialize database");
@@ -31,6 +34,9 @@ pub fn run() {
             cleanup_expired_links,
             // ブラウザ
             get_active_browser_url,
+            // インポート
+            parse_bookmarks_html,
+            import_bookmarks,
             // カテゴリ
             get_categories,
             create_category,

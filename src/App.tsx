@@ -1,5 +1,6 @@
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useCallback, useEffect, useState } from 'react';
+import { ImportDialog } from './components/ImportDialog';
 import { AddLinkDialog } from './components/main/AddLinkDialog';
 import { LinkDetail } from './components/main/LinkDetail';
 import { LinkList } from './components/main/LinkList';
@@ -17,6 +18,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [searchPaletteOpen, setSearchPaletteOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const { activeFilter, activeCategoryId, selectedLinkId, detailPanelOpen } = useUIStore();
 
@@ -164,6 +166,16 @@ function App() {
         onOpenChange={setAddDialogOpen}
         categories={categories}
         onSubmit={handleAddLink}
+      />
+
+      {/* インポートダイアログ */}
+      <ImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onComplete={() => {
+          loadLinks();
+          loadCategories();
+        }}
       />
     </div>
   );

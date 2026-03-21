@@ -66,3 +66,25 @@ export interface BrowserInfo {
 export async function getActiveBrowserUrl(): Promise<BrowserInfo | null> {
   return invoke('get_active_browser_url');
 }
+
+// === インポート ===
+
+export interface ImportItem {
+  url: string;
+  title: string;
+  folder: string | null;
+}
+
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+  categories_created: number;
+}
+
+export async function parseBookmarksHtml(content: string): Promise<ImportItem[]> {
+  return invoke('parse_bookmarks_html', { content });
+}
+
+export async function importBookmarks(items: ImportItem[]): Promise<ImportResult> {
+  return invoke('import_bookmarks', { items });
+}
