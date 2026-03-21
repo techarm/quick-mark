@@ -16,18 +16,34 @@ export function LinkDetail({ link, onOpen }: LinkDetailProps) {
 
   return (
     <div
-      className="flex h-full w-[var(--detail-panel-width)] flex-col border-l"
       style={{
-        borderColor: 'var(--border-subtle)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        width: 'var(--detail-panel-width)',
+        borderLeft: '1px solid var(--border-medium)',
         background: 'var(--bg-surface)',
       }}
     >
       {/* ヘッダー */}
       <div
-        className="flex items-center justify-between border-b px-4 py-2"
-        style={{ borderColor: 'var(--border-subtle)' }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 16px',
+          borderBottom: '1px solid var(--border-subtle)',
+        }}
       >
-        <span className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--text-tertiary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
           リンク詳細
         </span>
         <button
@@ -36,38 +52,84 @@ export function LinkDetail({ link, onOpen }: LinkDetailProps) {
             setDetailPanelOpen(false);
             setSelectedLinkId(null);
           }}
-          className="rounded p-1 transition-colors"
-          style={{ color: 'var(--text-tertiary)' }}
+          className="dialog-close-btn"
         >
           <X size={14} />
         </button>
       </div>
 
       {/* コンテンツ */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
         {/* Favicon + タイトル */}
-        <div className="mb-4 flex items-start gap-3">
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 14,
+            marginBottom: 24,
+          }}
+        >
           <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-            style={{ background: 'var(--bg-elevated)' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 44,
+              height: 44,
+              borderRadius: 'var(--radius-lg)',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-subtle)',
+              flexShrink: 0,
+            }}
           >
             {link.favicon_url ? (
-              <img src={link.favicon_url} alt="" className="h-7 w-7 rounded" />
+              <img
+                src={link.favicon_url}
+                alt=""
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 4,
+                }}
+              />
             ) : (
               <ExternalLink size={20} style={{ color: 'var(--text-tertiary)' }} />
             )}
           </div>
-          <div className="min-w-0 flex-1">
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h3
-              className="text-sm font-semibold leading-tight"
-              style={{ color: 'var(--text-primary)' }}
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                lineHeight: 1.4,
+                wordBreak: 'break-word',
+              }}
             >
               {link.title || '無題'}
             </h3>
             {link.is_pinned && (
-              <div className="mt-1 flex items-center gap-1">
-                <Pin size={10} style={{ color: 'var(--accent-primary)' }} />
-                <span className="text-[10px]" style={{ color: 'var(--accent-primary)' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  marginTop: 6,
+                }}
+              >
+                <Pin
+                  size={11}
+                  style={{
+                    color: 'var(--accent-primary)',
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--accent-primary)',
+                    fontWeight: 500,
+                  }}
+                >
                   ピン留め
                 </span>
               </div>
@@ -80,46 +142,64 @@ export function LinkDetail({ link, onOpen }: LinkDetailProps) {
           <button
             type="button"
             onClick={() => onOpen(link)}
-            className="url-text truncate text-left transition-colors hover:underline"
-            style={{ color: 'var(--accent-primary)' }}
+            className="url-text"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--accent-primary)',
+              textAlign: 'left',
+              wordBreak: 'break-all',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.8em',
+              padding: 0,
+            }}
           >
             {link.url}
           </button>
         </DetailRow>
 
-        {/* ドメイン */}
         <DetailRow icon={ExternalLink} label="ドメイン">
-          <span className="url-text" style={{ color: 'var(--text-secondary)' }}>
-            {domain}
-          </span>
+          <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{domain}</span>
         </DetailRow>
 
-        {/* 説明 */}
         {link.description && (
           <DetailRow icon={Hash} label="説明">
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
               {link.description}
             </p>
           </DetailRow>
         )}
 
         {/* メタデータ */}
-        <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--border-subtle)' }}>
+        <div
+          style={{
+            marginTop: 20,
+            paddingTop: 20,
+            borderTop: '1px solid var(--border-subtle)',
+          }}
+        >
           <DetailRow icon={Hash} label="アクセス回数">
-            <span className="text-sm tabular-nums" style={{ color: 'var(--text-secondary)' }}>
+            <span
+              style={{
+                fontSize: 13,
+                color: 'var(--text-secondary)',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
               {link.visit_count}回
             </span>
           </DetailRow>
 
           <DetailRow icon={Calendar} label="作成日時">
-            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
               {formatDate(link.created_at)}
             </span>
           </DetailRow>
 
           {link.last_visited_at && (
             <DetailRow icon={Clock} label="最終アクセス">
-              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                 {formatDate(link.last_visited_at)}
               </span>
             </DetailRow>
@@ -128,8 +208,8 @@ export function LinkDetail({ link, onOpen }: LinkDetailProps) {
           {link.is_temporary && link.expires_at && (
             <DetailRow icon={Clock} label="期限">
               <span
-                className="text-sm"
                 style={{
+                  fontSize: 13,
                   color:
                     new Date(link.expires_at) < new Date()
                       ? 'var(--accent-danger)'
@@ -144,14 +224,19 @@ export function LinkDetail({ link, onOpen }: LinkDetailProps) {
       </div>
 
       {/* アクション */}
-      <div className="border-t p-3" style={{ borderColor: 'var(--border-subtle)' }}>
+      <div
+        style={{
+          padding: 16,
+          borderTop: '1px solid var(--border-subtle)',
+        }}
+      >
         <button
           type="button"
           onClick={() => onOpen(link)}
-          className="flex w-full items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-all duration-150 hover:brightness-110"
+          className="btn btn-primary"
           style={{
-            background: 'var(--accent-gradient)',
-            color: 'var(--text-on-accent)',
+            width: '100%',
+            gap: 8,
           }}
         >
           <ExternalLink size={14} />
@@ -172,17 +257,29 @@ function DetailRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-3">
-      <div className="mb-1 flex items-center gap-1.5">
-        <Icon size={11} style={{ color: 'var(--text-tertiary)' }} />
+    <div style={{ marginBottom: 16 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          marginBottom: 4,
+        }}
+      >
+        <Icon size={12} style={{ color: 'var(--text-tertiary)' }} />
         <span
-          className="text-[10px] uppercase tracking-wider"
-          style={{ color: 'var(--text-tertiary)' }}
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: 'var(--text-tertiary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
         >
           {label}
         </span>
       </div>
-      <div className="pl-[18px]">{children}</div>
+      <div style={{ paddingLeft: 18 }}>{children}</div>
     </div>
   );
 }

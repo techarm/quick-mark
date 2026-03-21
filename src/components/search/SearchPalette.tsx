@@ -17,7 +17,6 @@ export function SearchPalette({ open, onOpenChange, onOpenLink }: SearchPaletteP
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // 検索実行
   const doSearch = useCallback(async (q: string) => {
     setLoading(true);
     try {
@@ -30,11 +29,9 @@ export function SearchPalette({ open, onOpenChange, onOpenLink }: SearchPaletteP
     }
   }, []);
 
-  // 空クエリ時のおすすめを読み込み
   useEffect(() => {
     if (open) {
       doSearch('');
-      // フォーカス
       setTimeout(() => inputRef.current?.focus(), 50);
     } else {
       setQuery('');
@@ -42,7 +39,6 @@ export function SearchPalette({ open, onOpenChange, onOpenLink }: SearchPaletteP
     }
   }, [open, doSearch]);
 
-  // デバウンス検索
   useEffect(() => {
     if (!open) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -52,7 +48,6 @@ export function SearchPalette({ open, onOpenChange, onOpenLink }: SearchPaletteP
     };
   }, [query, open, doSearch]);
 
-  // ESCで閉じる
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -71,58 +66,88 @@ export function SearchPalette({ open, onOpenChange, onOpenLink }: SearchPaletteP
   return (
     <div
       role="presentation"
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]"
-      style={{ background: 'rgba(0, 0, 0, 0.4)' }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        paddingTop: '15vh',
+        background: 'rgba(0, 0, 0, 0.45)',
+        animation: 'overlay-show 200ms ease',
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onOpenChange(false);
       }}
     >
       <div
-        className="glass-overlay w-[680px] overflow-hidden"
+        className="glass-overlay"
         style={{
+          width: 640,
+          overflow: 'hidden',
           animation: 'search-enter 150ms cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
         <Command shouldFilter={false} onKeyDown={handleKeyDown}>
           {/* 検索入力 */}
           <div
-            className="flex items-center gap-3 border-b px-4 py-3"
-            style={{ borderColor: 'var(--border-subtle)' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '14px 18px',
+              borderBottom: '1px solid var(--border-subtle)',
+            }}
           >
-            <Search size={18} style={{ color: 'var(--text-tertiary)' }} />
+            <Search size={18} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
             <Command.Input
               ref={inputRef}
               value={query}
               onValueChange={setQuery}
               placeholder="リンクを検索..."
-              className="flex-1 bg-transparent text-base outline-none"
-              style={{ color: 'var(--text-primary)' }}
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                fontSize: 15,
+                color: 'var(--text-primary)',
+                fontFamily: 'inherit',
+              }}
             />
             {loading && (
               <div
-                className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
-                style={{ borderColor: 'var(--accent-primary)', borderTopColor: 'transparent' }}
+                style={{
+                  width: 16,
+                  height: 16,
+                  border: '2px solid var(--accent-primary)',
+                  borderTopColor: 'transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 600ms linear infinite',
+                }}
               />
             )}
-            <kbd
-              className="rounded px-1.5 py-0.5 text-[10px]"
-              style={{
-                background: 'var(--bg-elevated)',
-                color: 'var(--text-tertiary)',
-                border: '1px solid var(--border-subtle)',
-              }}
-            >
-              ESC
-            </kbd>
+            <span className="kbd">ESC</span>
           </div>
 
           {/* 結果リスト */}
           <Command.List
-            className="max-h-[400px] overflow-y-auto p-2"
-            style={{ scrollbarWidth: 'thin' }}
+            style={{
+              maxHeight: 380,
+              overflow: 'auto',
+              padding: 8,
+            }}
           >
             <Command.Empty>
-              <div className="py-8 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
+              <div
+                style={{
+                  padding: '40px 0',
+                  textAlign: 'center',
+                  fontSize: 13,
+                  color: 'var(--text-tertiary)',
+                }}
+              >
                 {query ? '該当するリンクが見つかりません' : 'リンクがありません'}
               </div>
             </Command.Empty>
@@ -141,44 +166,67 @@ export function SearchPalette({ open, onOpenChange, onOpenLink }: SearchPaletteP
 
           {/* フッター */}
           <div
-            className="flex items-center justify-between border-t px-4 py-2"
-            style={{ borderColor: 'var(--border-subtle)' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 18px',
+              borderTop: '1px solid var(--border-subtle)',
+            }}
           >
-            <div className="flex items-center gap-3">
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
               <span
-                className="flex items-center gap-1 text-[10px]"
-                style={{ color: 'var(--text-tertiary)' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 11,
+                  color: 'var(--text-tertiary)',
+                }}
               >
-                <kbd className="rounded bg-[var(--bg-elevated)] px-1 py-0.5 text-[9px]">↑↓</kbd>
+                <span className="kbd">↑↓</span>
                 選択
               </span>
               <span
-                className="flex items-center gap-1 text-[10px]"
-                style={{ color: 'var(--text-tertiary)' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 11,
+                  color: 'var(--text-tertiary)',
+                }}
               >
-                <kbd className="rounded bg-[var(--bg-elevated)] px-1 py-0.5 text-[9px]">Enter</kbd>
+                <span className="kbd">Enter</span>
                 開く
               </span>
             </div>
-            <span className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>
+            <span
+              style={{
+                fontSize: 11,
+                color: 'var(--text-tertiary)',
+              }}
+            >
               {results.length}件
             </span>
           </div>
         </Command>
-
-        <style>{`
-          @keyframes search-enter {
-            from {
-              opacity: 0;
-              transform: scale(0.96) translateY(-8px);
-            }
-            to {
-              opacity: 1;
-              transform: scale(1) translateY(0);
-            }
-          }
-        `}</style>
       </div>
+
+      <style>{`
+        @keyframes search-enter {
+          from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -190,38 +238,96 @@ function SearchResultItem({ link, onSelect }: { link: Link; onSelect: () => void
     <Command.Item
       value={link.id}
       onSelect={onSelect}
-      className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors duration-75 aria-selected:bg-[rgba(226,80,80,0.1)]"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 12px',
+        borderRadius: 'var(--radius-md)',
+        cursor: 'pointer',
+        transition: 'background 75ms ease',
+      }}
+      className="aria-selected:bg-[rgba(226,80,80,0.1)]"
     >
       {/* Favicon */}
       <div
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded"
-        style={{ background: 'var(--bg-elevated)' }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 32,
+          height: 32,
+          borderRadius: 'var(--radius-md)',
+          background: 'var(--bg-elevated)',
+          flexShrink: 0,
+        }}
       >
         {link.favicon_url ? (
-          <img src={link.favicon_url} alt="" className="h-4 w-4 rounded-sm" />
+          <img
+            src={link.favicon_url}
+            alt=""
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: 3,
+            }}
+          />
         ) : (
-          <ExternalLink size={12} style={{ color: 'var(--text-tertiary)' }} />
+          <ExternalLink size={14} style={{ color: 'var(--text-tertiary)' }} />
         )}
       </div>
 
       {/* タイトル + URL */}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: 'var(--text-primary)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {link.title || link.url}
           </span>
-          {link.is_pinned && <Pin size={10} style={{ color: 'var(--accent-primary)' }} />}
+          {link.is_pinned && (
+            <Pin size={11} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+          )}
         </div>
-        <span className="url-text truncate block">{domain}</span>
+        <span
+          className="url-text"
+          style={{
+            display: 'block',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {domain}
+        </span>
       </div>
 
       {/* バッジ */}
       {link.is_temporary && link.expires_at && (
         <span
-          className="flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px]"
           style={{
-            background: 'rgba(245, 158, 11, 0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 3,
+            padding: '2px 8px',
+            borderRadius: 99,
+            fontSize: 10,
+            background: 'rgba(245, 158, 11, 0.12)',
             color: 'var(--accent-warm)',
+            flexShrink: 0,
           }}
         >
           <Timer size={9} />
@@ -229,11 +335,14 @@ function SearchResultItem({ link, onSelect }: { link: Link; onSelect: () => void
         </span>
       )}
 
-      {/* アクセス回数 */}
       {link.visit_count > 0 && (
         <span
-          className="shrink-0 text-[10px] tabular-nums"
-          style={{ color: 'var(--text-tertiary)' }}
+          style={{
+            fontSize: 11,
+            color: 'var(--text-tertiary)',
+            flexShrink: 0,
+            fontVariantNumeric: 'tabular-nums',
+          }}
         >
           {link.visit_count}回
         </span>

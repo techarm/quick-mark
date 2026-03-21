@@ -1,6 +1,5 @@
 import { ExternalLink, MoreHorizontal, Pin, Timer } from 'lucide-react';
 import type { Link } from '../../lib/types';
-import { cn } from '../../lib/utils';
 import { useUIStore } from '../../stores/ui.store';
 
 interface LinkListProps {
@@ -13,15 +12,32 @@ export function LinkList({ links, onOpen }: LinkListProps) {
 
   if (links.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          {/* アイコン */}
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 20,
+          }}
+        >
           <div
-            className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl"
             style={{
+              width: 72,
+              height: 72,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 'var(--radius-xl)',
               background: 'linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-surface) 100%)',
               border: '1px solid var(--border-subtle)',
-              boxShadow: 'inset 0 1px 0 rgba(255, 200, 200, 0.04)',
             }}
           >
             <svg
@@ -35,32 +51,37 @@ export function LinkList({ links, onOpen }: LinkListProps) {
               strokeLinejoin="round"
               role="img"
               aria-label="リンクアイコン"
-              style={{ color: 'var(--text-tertiary)', opacity: 0.6 }}
+              style={{
+                color: 'var(--text-tertiary)',
+                opacity: 0.5,
+              }}
             >
               <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
             </svg>
           </div>
-          {/* テキスト */}
-          <div className="text-center">
-            <p className="text-[15px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+          <div style={{ textAlign: 'center' }}>
+            <p
+              style={{
+                fontSize: 15,
+                fontWeight: 500,
+                color: 'var(--text-secondary)',
+                marginBottom: 8,
+              }}
+            >
               リンクがありません
             </p>
             <p
-              className="mt-1.5 text-[13px] leading-relaxed"
-              style={{ color: 'var(--text-tertiary)' }}
+              style={{
+                fontSize: 13,
+                color: 'var(--text-tertiary)',
+                lineHeight: 1.6,
+              }}
             >
               右上の「追加」ボタンまたは
-              <kbd
-                className="mx-1 inline-block rounded px-1.5 py-0.5 text-[11px] font-medium"
-                style={{
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-secondary)',
-                }}
-              >
+              <span className="kbd" style={{ margin: '0 4px' }}>
                 ⌘⇧A
-              </kbd>
+              </span>
               で追加
             </p>
           </div>
@@ -71,7 +92,16 @@ export function LinkList({ links, onOpen }: LinkListProps) {
 
   if (viewMode === 'card') {
     return (
-      <div className="grid grid-cols-2 gap-3 overflow-y-auto p-4 xl:grid-cols-3">
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: 12,
+          padding: 20,
+          overflow: 'auto',
+          flex: 1,
+        }}
+      >
         {links.map((link) => (
           <LinkCard
             key={link.id}
@@ -86,7 +116,7 @@ export function LinkList({ links, onOpen }: LinkListProps) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div style={{ flex: 1, overflow: 'auto' }}>
       {links.map((link) => (
         <LinkRow
           key={link.id}
@@ -123,45 +153,92 @@ function LinkRow({
       onKeyDown={(e) => {
         if (e.key === 'Enter') onOpen();
       }}
-      className={cn(
-        'flex h-12 cursor-pointer items-center gap-3 border-b px-4 transition-colors duration-100',
-      )}
       style={{
-        borderColor: 'var(--border-subtle)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        height: 48,
+        padding: '0 20px',
+        cursor: 'pointer',
+        borderBottom: '1px solid var(--border-subtle)',
         background: selected ? 'var(--accent-subtle)' : 'transparent',
-        borderLeft: link.is_temporary ? '2px solid var(--accent-warm)' : '2px solid transparent',
+        borderLeft: link.is_temporary ? '3px solid var(--accent-warm)' : '3px solid transparent',
+        transition: 'background 100ms ease',
       }}
     >
       {/* Favicon */}
       <div
-        className="flex h-5 w-5 shrink-0 items-center justify-center rounded"
-        style={{ background: 'var(--bg-elevated)' }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 28,
+          height: 28,
+          borderRadius: 'var(--radius-sm)',
+          background: 'var(--bg-elevated)',
+          flexShrink: 0,
+        }}
       >
         {link.favicon_url ? (
-          <img src={link.favicon_url} alt="" className="h-4 w-4 rounded-sm" />
+          <img
+            src={link.favicon_url}
+            alt=""
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: 2,
+            }}
+          />
         ) : (
-          <ExternalLink size={12} style={{ color: 'var(--text-tertiary)' }} />
+          <ExternalLink size={13} style={{ color: 'var(--text-tertiary)' }} />
         )}
       </div>
 
       {/* タイトル */}
-      <span className="flex-1 truncate text-sm" style={{ color: 'var(--text-primary)' }}>
+      <span
+        style={{
+          flex: 1,
+          fontSize: 13,
+          fontWeight: 500,
+          color: 'var(--text-primary)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
         {link.title || link.url}
       </span>
 
       {/* ドメイン */}
-      <span className="url-text hidden shrink-0 sm:inline">{domain}</span>
+      <span className="url-text" style={{ flexShrink: 0 }}>
+        {domain}
+      </span>
 
-      {/* ピンバッジ */}
-      {link.is_pinned && <Pin size={12} style={{ color: 'var(--accent-primary)' }} />}
+      {/* ピン */}
+      {link.is_pinned && (
+        <Pin
+          size={12}
+          style={{
+            color: 'var(--accent-primary)',
+            flexShrink: 0,
+          }}
+        />
+      )}
 
       {/* 期限バッジ */}
       {expiryInfo && (
         <span
-          className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
           style={{
-            background: expiryInfo.urgent ? 'rgba(255, 71, 87, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 3,
+            padding: '2px 8px',
+            borderRadius: 99,
+            fontSize: 10,
+            fontWeight: 500,
+            background: expiryInfo.urgent ? 'rgba(255, 71, 87, 0.12)' : 'rgba(245, 158, 11, 0.12)',
             color: expiryInfo.urgent ? 'var(--accent-danger)' : 'var(--accent-warm)',
+            flexShrink: 0,
           }}
         >
           <Timer size={10} />
@@ -170,16 +247,43 @@ function LinkRow({
       )}
 
       {/* アクセス回数 */}
-      <span className="shrink-0 text-xs tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
-        {link.visit_count > 0 ? `${link.visit_count}回` : ''}
-      </span>
+      {link.visit_count > 0 && (
+        <span
+          style={{
+            fontSize: 11,
+            color: 'var(--text-tertiary)',
+            fontVariantNumeric: 'tabular-nums',
+            flexShrink: 0,
+          }}
+        >
+          {link.visit_count}回
+        </span>
+      )}
 
       {/* メニュー */}
       <button
         type="button"
         onClick={(e) => e.stopPropagation()}
-        className="rounded p-1 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100"
-        style={{ color: 'var(--text-tertiary)' }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 24,
+          height: 24,
+          border: 'none',
+          borderRadius: 'var(--radius-sm)',
+          background: 'transparent',
+          color: 'var(--text-tertiary)',
+          cursor: 'pointer',
+          opacity: 0,
+          transition: 'opacity 150ms ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = '1';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = '0';
+        }}
       >
         <MoreHorizontal size={14} />
       </button>
@@ -210,45 +314,118 @@ function LinkCard({
       onKeyDown={(e) => {
         if (e.key === 'Enter') onOpen();
       }}
-      className={cn('card-gradient group cursor-pointer p-3 transition-transform duration-150')}
+      className="card-gradient"
       style={{
+        padding: 16,
+        cursor: 'pointer',
         borderColor: selected ? 'var(--border-focus)' : undefined,
-        borderLeft: link.is_temporary
-          ? '2px solid var(--accent-warm)'
-          : '2px solid var(--border-subtle)',
+        borderLeft: link.is_temporary ? '3px solid var(--accent-warm)' : undefined,
       }}
     >
-      <div className="mb-2 flex items-start gap-2">
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
         <div
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
-          style={{ background: 'var(--bg-elevated)' }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 36,
+            height: 36,
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-elevated)',
+            flexShrink: 0,
+          }}
         >
           {link.favicon_url ? (
-            <img src={link.favicon_url} alt="" className="h-6 w-6 rounded" />
+            <img
+              src={link.favicon_url}
+              alt=""
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 4,
+              }}
+            />
           ) : (
             <ExternalLink size={16} style={{ color: 'var(--text-tertiary)' }} />
           )}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              marginBottom: 2,
+            }}
+          >
             {link.title || link.url}
           </p>
-          <p className="url-text truncate">{domain}</p>
+          <span
+            className="url-text"
+            style={{
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {domain}
+          </span>
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          {link.is_pinned && <Pin size={11} style={{ color: 'var(--accent-primary)' }} />}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          {link.is_pinned && (
+            <Pin
+              size={11}
+              style={{
+                color: 'var(--accent-primary)',
+              }}
+            />
+          )}
         </div>
-        <div className="flex items-center gap-2">
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
           {expiryInfo && (
             <span
-              className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px]"
               style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 3,
+                padding: '2px 8px',
+                borderRadius: 99,
+                fontSize: 10,
                 background: expiryInfo.urgent
-                  ? 'rgba(255, 71, 87, 0.15)'
-                  : 'rgba(245, 158, 11, 0.15)',
+                  ? 'rgba(255, 71, 87, 0.12)'
+                  : 'rgba(245, 158, 11, 0.12)',
                 color: expiryInfo.urgent ? 'var(--accent-danger)' : 'var(--accent-warm)',
               }}
             >
@@ -256,8 +433,14 @@ function LinkCard({
             </span>
           )}
           {link.visit_count > 0 && (
-            <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
-              {link.visit_count}回閲覧
+            <span
+              style={{
+                fontSize: 10,
+                color: 'var(--text-tertiary)',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {link.visit_count}回
             </span>
           )}
         </div>
@@ -265,8 +448,6 @@ function LinkCard({
     </div>
   );
 }
-
-// ユーティリティ関数
 
 function getDomain(url: string): string {
   try {

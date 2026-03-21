@@ -1,5 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog';
-import { Plus, X } from 'lucide-react';
+import { Link2, X } from 'lucide-react';
 import { useState } from 'react';
 import type { Category, CreateLinkInput } from '../../lib/types';
 
@@ -35,7 +35,6 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
       expires_at: expiresAt,
     });
 
-    // フォームリセット
     setUrl('');
     setTitle('');
     setDescription('');
@@ -48,176 +47,160 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay
-          className="fixed inset-0 z-50"
-          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
-        />
-        <Dialog.Content className="glass-overlay fixed top-1/2 left-1/2 z-50 w-[480px] -translate-x-1/2 -translate-y-1/2 p-0">
+        <Dialog.Overlay className="dialog-overlay" />
+        <Dialog.Content className="dialog-content glass-overlay" style={{ width: 480, padding: 0 }}>
           {/* ヘッダー */}
-          <div
-            className="flex items-center justify-between border-b px-5 py-3"
-            style={{ borderColor: 'var(--border-subtle)' }}
-          >
+          <div className="dialog-header">
             <Dialog.Title
-              className="flex items-center gap-2 text-sm font-semibold"
-              style={{ color: 'var(--text-primary)' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                fontSize: 15,
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                margin: 0,
+              }}
             >
-              <Plus size={16} style={{ color: 'var(--accent-primary)' }} />
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--accent-subtle)',
+                }}
+              >
+                <Link2 size={14} style={{ color: 'var(--accent-primary)' }} />
+              </div>
               リンクを追加
             </Dialog.Title>
             <Dialog.Close asChild>
-              <button
-                type="button"
-                className="rounded p-1"
-                style={{ color: 'var(--text-tertiary)' }}
-              >
-                <X size={14} />
+              <button type="button" className="dialog-close-btn">
+                <X size={15} />
               </button>
             </Dialog.Close>
           </div>
 
           {/* フォーム */}
-          <form onSubmit={handleSubmit} className="space-y-3 p-5">
-            <FormField label="URL" required>
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://example.com"
-                className="input-field"
-                required
-              />
-            </FormField>
-
-            <FormField label="タイトル">
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="リンクのタイトル"
-                className="input-field"
-              />
-            </FormField>
-
-            <FormField label="説明">
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="メモや説明（任意）"
-                className="input-field"
-              />
-            </FormField>
-
-            <FormField label="カテゴリ">
-              <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="input-field"
-              >
-                <option value="">未分類</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-
-            <div className="flex items-center gap-3">
-              <label
-                className="flex items-center gap-2 text-sm"
-                style={{ color: 'var(--text-secondary)' }}
-              >
+          <form onSubmit={handleSubmit}>
+            <div
+              className="dialog-body"
+              style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+            >
+              <div className="form-field">
+                <label className="form-label">
+                  URL<span className="required">*</span>
+                </label>
                 <input
-                  type="checkbox"
-                  checked={isTemporary}
-                  onChange={(e) => setIsTemporary(e.target.checked)}
-                  className="accent-[var(--accent-primary)]"
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  className="input-field"
+                  required
                 />
-                一時リンク
-              </label>
-              {isTemporary && (
-                <div className="flex items-center gap-1">
+              </div>
+
+              <div className="form-field">
+                <label className="form-label">タイトル</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="リンクのタイトル（空欄ならURLから取得）"
+                  className="input-field"
+                />
+              </div>
+
+              <div className="form-field">
+                <label className="form-label">説明</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="メモや説明（任意）"
+                  className="input-field"
+                  rows={2}
+                  style={{
+                    height: 'auto',
+                    minHeight: 64,
+                    padding: '10px 12px',
+                    resize: 'vertical',
+                  }}
+                />
+              </div>
+
+              <div className="form-field">
+                <label className="form-label">カテゴリ</label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="">未分類</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 一時リンク */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontSize: 13,
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                  }}
+                >
                   <input
-                    type="number"
-                    value={expiryDays}
-                    onChange={(e) => setExpiryDays(Number(e.target.value))}
-                    min={1}
-                    max={365}
-                    className="input-field w-16 text-center"
+                    type="checkbox"
+                    checked={isTemporary}
+                    onChange={(e) => setIsTemporary(e.target.checked)}
+                    className="checkbox"
                   />
-                  <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                    日後に期限切れ
-                  </span>
-                </div>
-              )}
+                  一時リンク
+                </label>
+                {isTemporary && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input
+                      type="number"
+                      value={expiryDays}
+                      onChange={(e) => setExpiryDays(Number(e.target.value))}
+                      min={1}
+                      max={365}
+                      className="input-field"
+                      style={{ width: 64, height: 32, textAlign: 'center', fontSize: 13 }}
+                    />
+                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                      日後に期限切れ
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            {/* フッター */}
+            <div className="dialog-footer">
               <Dialog.Close asChild>
-                <button
-                  type="button"
-                  className="rounded-md px-4 py-2 text-sm transition-colors"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
+                <button type="button" className="btn btn-ghost">
                   キャンセル
                 </button>
               </Dialog.Close>
-              <button
-                type="submit"
-                className="rounded-md px-4 py-2 text-sm font-medium transition-all duration-150 hover:brightness-110"
-                style={{
-                  background: 'var(--accent-gradient)',
-                  color: 'var(--text-on-accent)',
-                }}
-              >
+              <button type="submit" className="btn btn-primary">
                 追加する
               </button>
             </div>
           </form>
-
-          <style>{`
-            .input-field {
-              width: 100%;
-              padding: 6px 10px;
-              border-radius: var(--radius-md);
-              border: 1px solid var(--border-subtle);
-              background: var(--bg-input);
-              color: var(--text-primary);
-              font-size: 0.875rem;
-              outline: none;
-              transition: border-color 150ms ease;
-            }
-            .input-field:focus {
-              border-color: var(--border-focus);
-            }
-            .input-field::placeholder {
-              color: var(--text-tertiary);
-            }
-          `}</style>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-  );
-}
-
-function FormField({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>
-        {label}
-        {required && <span style={{ color: 'var(--accent-primary)' }}> *</span>}
-      </span>
-      {children}
-    </label>
   );
 }

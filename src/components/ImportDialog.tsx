@@ -26,7 +26,6 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
         multiple: false,
         filters: [{ name: 'HTMLファイル', extensions: ['html', 'htm'] }],
       });
-
       if (!selected) return;
 
       setState('parsing');
@@ -65,7 +64,6 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
     onOpenChange(false);
   };
 
-  // フォルダごとにグループ化
   const grouped = items.reduce<Record<string, ImportItem[]>>((acc, item) => {
     const key = item.folder || '未分類';
     if (!acc[key]) acc[key] = [];
@@ -76,52 +74,98 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
   return (
     <Dialog.Root open={open} onOpenChange={handleClose}>
       <Dialog.Portal>
-        <Dialog.Overlay
-          className="fixed inset-0 z-50"
-          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
-        />
-        <Dialog.Content className="glass-overlay fixed top-1/2 left-1/2 z-50 w-[560px] max-h-[80vh] -translate-x-1/2 -translate-y-1/2 flex flex-col p-0">
+        <Dialog.Overlay className="dialog-overlay" />
+        <Dialog.Content
+          className="dialog-content glass-overlay"
+          style={{
+            width: 540,
+            maxHeight: '80vh',
+            padding: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
           {/* ヘッダー */}
-          <div
-            className="flex items-center justify-between border-b px-5 py-3"
-            style={{ borderColor: 'var(--border-subtle)' }}
-          >
+          <div className="dialog-header">
             <Dialog.Title
-              className="flex items-center gap-2 text-sm font-semibold"
-              style={{ color: 'var(--text-primary)' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                fontSize: 15,
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                margin: 0,
+              }}
             >
-              <Upload size={16} style={{ color: 'var(--accent-primary)' }} />
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--accent-subtle)',
+                }}
+              >
+                <Upload size={14} style={{ color: 'var(--accent-primary)' }} />
+              </div>
               ブックマークをインポート
             </Dialog.Title>
             <Dialog.Close asChild>
-              <button
-                type="button"
-                className="rounded p-1"
-                style={{ color: 'var(--text-tertiary)' }}
-              >
-                <X size={14} />
+              <button type="button" className="dialog-close-btn">
+                <X size={15} />
               </button>
             </Dialog.Close>
           </div>
 
           {/* コンテンツ */}
-          <div className="flex-1 overflow-y-auto p-5">
+          <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
             {state === 'idle' && (
-              <div className="flex flex-col items-center gap-4 py-8">
-                <FileUp size={48} style={{ color: 'var(--text-tertiary)' }} />
-                <div className="text-center">
-                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 16,
+                  padding: '32px 0',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 64,
+                    height: 64,
+                    borderRadius: 'var(--radius-xl)',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                >
+                  <FileUp size={28} style={{ color: 'var(--text-tertiary)', opacity: 0.6 }} />
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <p
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 500,
+                      color: 'var(--text-primary)',
+                      marginBottom: 6,
+                    }}
+                  >
                     ブラウザからエクスポートしたHTMLファイルを選択
                   </p>
-                  <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                     Chrome、Firefox、Safari、Edge のブックマークに対応
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={handleSelectFile}
-                  className="rounded-md px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
-                  style={{ background: 'var(--accent-gradient)', color: 'var(--text-on-accent)' }}
+                  className="btn btn-primary"
+                  style={{ marginTop: 4 }}
                 >
                   ファイルを選択
                 </button>
@@ -129,13 +173,21 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
             )}
 
             {state === 'parsing' && (
-              <div className="flex flex-col items-center gap-3 py-8">
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '40px 0',
+                }}
+              >
                 <Loader2
-                  size={32}
+                  size={28}
                   className="animate-spin"
                   style={{ color: 'var(--accent-primary)' }}
                 />
-                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                   ブックマークを解析中...
                 </p>
               </div>
@@ -143,33 +195,55 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
 
             {state === 'preview' && (
               <div>
-                <p className="mb-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  {items.length}件のリンクが見つかりました。インポートしますか？
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+                  <strong style={{ color: 'var(--text-primary)' }}>{items.length}件</strong>
+                  のリンクが見つかりました
                 </p>
-                <div className="max-h-[300px] space-y-3 overflow-y-auto">
+                <div
+                  style={{
+                    maxHeight: 280,
+                    overflow: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 16,
+                  }}
+                >
                   {Object.entries(grouped).map(([folder, folderItems]) => (
                     <div key={folder}>
                       <p
-                        className="mb-1 text-xs font-semibold"
-                        style={{ color: 'var(--text-tertiary)' }}
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: 'var(--text-tertiary)',
+                          marginBottom: 6,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                        }}
                       >
                         {folder}（{folderItems.length}件）
                       </p>
-                      <div className="space-y-1">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {folderItems.slice(0, 5).map((item) => (
                           <div
                             key={item.url}
-                            className="rounded px-2 py-1 text-xs"
                             style={{
+                              padding: '6px 10px',
+                              borderRadius: 'var(--radius-sm)',
                               background: 'var(--bg-elevated)',
+                              fontSize: 12,
                               color: 'var(--text-secondary)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
                             }}
                           >
-                            <span className="truncate">{item.title}</span>
+                            {item.title}
                           </div>
                         ))}
                         {folderItems.length > 5 && (
-                          <p className="px-2 text-[10px]" style={{ color: 'var(--text-tertiary)' }}>
+                          <p
+                            style={{ paddingLeft: 10, fontSize: 11, color: 'var(--text-tertiary)' }}
+                          >
                             ...他 {folderItems.length - 5}件
                           </p>
                         )}
@@ -181,27 +255,48 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
             )}
 
             {state === 'importing' && (
-              <div className="flex flex-col items-center gap-3 py-8">
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '40px 0',
+                }}
+              >
                 <Loader2
-                  size={32}
+                  size={28}
                   className="animate-spin"
                   style={{ color: 'var(--accent-primary)' }}
                 />
-                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  インポート中...
-                </p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>インポート中...</p>
               </div>
             )}
 
             {state === 'done' && result && (
-              <div className="flex flex-col items-center gap-3 py-8">
-                <CheckCircle size={48} style={{ color: 'var(--accent-success)' }} />
-                <div className="text-center">
-                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 16,
+                  padding: '32px 0',
+                }}
+              >
+                <CheckCircle size={40} style={{ color: 'var(--accent-success)' }} />
+                <div style={{ textAlign: 'center' }}>
+                  <p
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 500,
+                      color: 'var(--text-primary)',
+                      marginBottom: 6,
+                    }}
+                  >
                     インポート完了
                   </p>
-                  <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    {result.imported}件インポート / {result.skipped}件スキップ（重複）/
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    {result.imported}件インポート / {result.skipped}件スキップ /{' '}
                     {result.categories_created}カテゴリ作成
                   </p>
                 </div>
@@ -209,45 +304,25 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
             )}
 
             {error && (
-              <p className="mt-2 text-xs" style={{ color: 'var(--accent-danger)' }}>
-                {error}
-              </p>
+              <p style={{ marginTop: 12, fontSize: 12, color: 'var(--accent-danger)' }}>{error}</p>
             )}
           </div>
 
           {/* フッター */}
           {(state === 'preview' || state === 'done') && (
-            <div
-              className="flex justify-end gap-2 border-t px-5 py-3"
-              style={{ borderColor: 'var(--border-subtle)' }}
-            >
+            <div className="dialog-footer">
               {state === 'preview' && (
                 <>
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="rounded-md px-4 py-2 text-sm"
-                    style={{ color: 'var(--text-secondary)' }}
-                  >
+                  <button type="button" onClick={handleClose} className="btn btn-ghost">
                     キャンセル
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleImport}
-                    className="rounded-md px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
-                    style={{ background: 'var(--accent-gradient)', color: 'var(--text-on-accent)' }}
-                  >
+                  <button type="button" onClick={handleImport} className="btn btn-primary">
                     {items.length}件をインポート
                   </button>
                 </>
               )}
               {state === 'done' && (
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="rounded-md px-4 py-2 text-sm font-medium transition-all hover:brightness-110"
-                  style={{ background: 'var(--accent-gradient)', color: 'var(--text-on-accent)' }}
-                >
+                <button type="button" onClick={handleClose} className="btn btn-primary">
                   閉じる
                 </button>
               )}
