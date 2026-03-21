@@ -1,0 +1,120 @@
+use rusqlite::{Connection, Result};
+use std::path::PathBuf;
+use tauri::Manager;
+
+pub struct AppDb {
+    pub conn: Connection,
+}
+
+pub fn get_db_path(app_handle: &tauri::AppHandle) -> PathBuf {
+    let app_dir = app_handle
+        .path()
+        .app_data_dir()
+        .expect("Failed to get app data dir");
+    std::fs::create_dir_all(&app_dir).expect("Failed to create app data dir");
+    app_dir.join("quickmark.db")
+}
+
+pub fn init_db(db_path: &PathBuf) -> Result<AppDb> {
+    let conn = Connection::open(db_path)?;
+
+    conn.execute_batch("PRAGMA journal_mode=WAL;")?;
+    conn.execute_batch("PRAGMA foreign_keys=ON;")?;
+
+    run_migrations(&conn)?;
+
+    Ok(AppDb { conn })
+}
+
+fn run_migrations(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "
+        CREATE TABLE IF NOT EXISTS categories (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            parent_id TEXT REFERENCES categories(id) ON DELETE CASCADE,
+            path TEXT NOT NULL DEFAULT '',
+            icon TEXT DEFAULT 'folder',
+            color TEXT DEFAULT '#E25050',
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS links (
+            id TEXT PRIMARY KEY,
+            url TEXT NOT NULL,
+            title TEXT NOT NULL DEFAULT '',
+            description TEXT DEFAULT '',
+            favicon_url TEXT DEFAULT '',
+            category_id TEXT REFERENCES categories(id) ON DELETE SET NULL,
+            is_temporary INTEGER NOT NULL DEFAULT 0,
+            expires_at TEXT DEFAULT NULL,
+            visit_count INTEGER NOT NULL DEFAULT 0,
+            last_visited_at TEXT DEFAULT NULL,
+            is_pinned INTEGER NOT NULL DEFAULT 0,
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS tags (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            color TEXT DEFAULT '#E25050'
+        );
+
+        CREATE TABLE IF NOT EXISTS link_tags (
+            link_id TEXT NOT NULL REFERENCES links(id) ON DELETE CASCADE,
+            tag_id TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+            PRIMARY KEY (link_id, tag_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_links_category ON links(category_id);
+        CREATE INDEX IF NOT EXISTS idx_links_expires ON links(is_temporary, expires_at)
+            WHERE is_temporary = 1;
+        CREATE INDEX IF NOT EXISTS idx_links_visited ON links(last_visited_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_links_pinned ON links(is_pinned) WHERE is_pinned = 1;
+        CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);
+        CREATE INDEX IF NOT EXISTS idx_categories_path ON categories(path);
+        ",
+    )?;
+
+    // FTS5 仮想テーブル
+    conn.execute_batch(
+        "
+        CREATE VIRTUAL TABLE IF NOT EXISTS links_fts USING fts5(
+            title,
+            url,
+            description,
+            tags_text,
+            content='links',
+            content_rowid='rowid',
+            tokenize='unicode61 remove_diacritics 2'
+        );
+        ",
+    )?;
+
+    // FTS同期トリガー
+    conn.execute_batch(
+        "
+        CREATE TRIGGER IF NOT EXISTS links_ai AFTER INSERT ON links BEGIN
+            INSERT INTO links_fts(rowid, title, url, description, tags_text)
+            VALUES (new.rowid, new.title, new.url, new.description, '');
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS links_ad AFTER DELETE ON links BEGIN
+            INSERT INTO links_fts(links_fts, rowid, title, url, description, tags_text)
+            VALUES ('delete', old.rowid, old.title, old.url, old.description, '');
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS links_au AFTER UPDATE ON links BEGIN
+            INSERT INTO links_fts(links_fts, rowid, title, url, description, tags_text)
+            VALUES ('delete', old.rowid, old.title, old.url, old.description, '');
+            INSERT INTO links_fts(rowid, title, url, description, tags_text)
+            VALUES (new.rowid, new.title, new.url, new.description, '');
+        END;
+        ",
+    )?;
+
+    Ok(())
+}
