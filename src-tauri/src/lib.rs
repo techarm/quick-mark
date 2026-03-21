@@ -4,6 +4,7 @@ mod db;
 use std::sync::Mutex;
 use tauri::Manager;
 
+use commands::browser::*;
 use commands::categories::*;
 use commands::links::*;
 
@@ -28,6 +29,8 @@ pub fn run() {
             search_links,
             open_link,
             cleanup_expired_links,
+            // ブラウザ
+            get_active_browser_url,
             // カテゴリ
             get_categories,
             create_category,

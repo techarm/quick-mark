@@ -55,3 +55,14 @@ export async function updateCategory(input: UpdateCategoryInput): Promise<Catego
 export async function deleteCategory(id: string): Promise<void> {
   return invoke('delete_category', { id });
 }
+
+// === ブラウザ ===
+
+export interface BrowserInfo {
+  url: string;
+  title: string;
+}
+
+export async function getActiveBrowserUrl(): Promise<BrowserInfo | null> {
+  return invoke('get_active_browser_url');
+}
