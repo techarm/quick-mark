@@ -18,7 +18,6 @@ import { LinkDetail } from './components/main/LinkDetail';
 import { LinkList } from './components/main/LinkList';
 import { Sidebar } from './components/main/Sidebar';
 import { Toolbar } from './components/main/Toolbar';
-import { SearchPalette } from './components/search/SearchPalette';
 import { TitleBar } from './components/TitleBar';
 import * as commands from './lib/commands';
 import type {
@@ -29,6 +28,41 @@ import type {
   UpdateLinkInput,
 } from './lib/types';
 import { useUIStore } from './stores/ui.store';
+
+// 独立検索ウィンドウのトグル
+async function toggleSearchWindow() {
+  try {
+    const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+
+    const existing = await WebviewWindow.getByLabel('search-palette');
+    if (existing) {
+      const visible = await existing.isVisible();
+      if (visible) {
+        await existing.hide();
+      } else {
+        await existing.show();
+        await existing.setFocus();
+      }
+    } else {
+      // 新しい検索ウィンドウを作成
+      new WebviewWindow('search-palette', {
+        url: '/search',
+        title: 'QuickMark Search',
+        width: 640,
+        height: 460,
+        center: true,
+        decorations: false,
+        transparent: true,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        resizable: false,
+        focus: true,
+      });
+    }
+  } catch (err) {
+    console.error('Failed to toggle search window:', err);
+  }
+}
 
 function App() {
   const [links, setLinks] = useState<Link[]>([]);
@@ -45,14 +79,7 @@ function App() {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
-  const {
-    activeFilter,
-    activeCategoryId,
-    selectedLinkId,
-    detailPanelOpen,
-    searchPaletteOpen,
-    setSearchPaletteOpen,
-  } = useUIStore();
+  const { activeFilter, activeCategoryId, selectedLinkId, detailPanelOpen } = useUIStore();
 
   // データの読み込み
   const loadLinks = useCallback(async () => {
@@ -96,15 +123,14 @@ function App() {
   }, []);
 
   // OS-level グローバルショートカット（Cmd+Shift+Space）
+  // OS-level グローバルショートカット（Cmd+Shift+Space）→ 独立検索ウィンドウ
   useEffect(() => {
     let registered = false;
 
     async function setupGlobalShortcut() {
       try {
         const { register, unregister } = await import('@tauri-apps/plugin-global-shortcut');
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
 
-        // 既存のショートカットがあれば解除
         try {
           await unregister('CommandOrControl+Shift+Space');
         } catch {
@@ -112,33 +138,12 @@ function App() {
         }
 
         await register('CommandOrControl+Shift+Space', async (event) => {
-          // キー解放時は無視（押下時のみ処理）
           if (event.state === 'Released') return;
-
-          const win = getCurrentWindow();
-          const store = useUIStore.getState();
-
-          try {
-            const visible = await win.isVisible();
-
-            if (visible && store.searchPaletteOpen) {
-              // パレット表示中 → 閉じてウィンドウを隠す
-              store.setSearchPaletteOpen(false);
-              await win.hide();
-            } else {
-              // ウィンドウを表示してパレットを開く
-              await win.show();
-              await win.setFocus();
-              store.setSearchPaletteOpen(true);
-            }
-          } catch (err) {
-            console.error('Global shortcut handler error:', err);
-          }
+          await toggleSearchWindow();
         });
 
         registered = true;
       } catch (err) {
-        // ブラウザ環境では登録できないので無視
         console.warn('Global shortcut not available:', err);
       }
     }
@@ -157,12 +162,10 @@ function App() {
   // アプリ内キーボードショートカット
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const store = useUIStore.getState();
-
-      // Cmd+K: 検索パレットトグル
+      // Cmd+K: 独立検索ウィンドウを開く
       if (e.metaKey && e.key === 'k') {
         e.preventDefault();
-        store.setSearchPaletteOpen(!store.searchPaletteOpen);
+        toggleSearchWindow();
       }
       // Cmd+Shift+A: リンク追加
       if (e.metaKey && e.shiftKey && e.key === 'a') {
@@ -376,13 +379,6 @@ function App() {
           />
         )}
       </div>
-
-      {/* 検索パレット（Spotlight風） */}
-      <SearchPalette
-        open={searchPaletteOpen}
-        onOpenChange={setSearchPaletteOpen}
-        onOpenLink={handleOpenLink}
-      />
 
       {/* リンク追加ダイアログ */}
       <AddLinkDialog
