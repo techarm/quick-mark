@@ -36,6 +36,7 @@ pub fn run() {
             get_active_browser_url,
             // インポート
             parse_bookmarks_html,
+            parse_json_links,
             import_bookmarks,
             // カテゴリ
             get_categories,

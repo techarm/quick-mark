@@ -96,6 +96,10 @@ export async function parseBookmarksHtml(content: string): Promise<ImportItem[]>
   return invoke('parse_bookmarks_html', { content });
 }
 
+export async function parseJsonLinks(content: string): Promise<ImportItem[]> {
+  return invoke('parse_json_links', { content });
+}
+
 export async function importBookmarks(items: ImportItem[]): Promise<ImportResult> {
   return invoke('import_bookmarks', { items });
 }

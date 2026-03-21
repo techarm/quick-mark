@@ -24,7 +24,11 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
     try {
       const selected = await openFileDialog({
         multiple: false,
-        filters: [{ name: 'HTMLファイル', extensions: ['html', 'htm'] }],
+        filters: [
+          { name: 'サポート形式', extensions: ['html', 'htm', 'json'] },
+          { name: 'HTMLブックマーク', extensions: ['html', 'htm'] },
+          { name: 'JSONファイル', extensions: ['json'] },
+        ],
       });
       if (!selected) return;
 
@@ -34,7 +38,13 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
       const filePath =
         typeof selected === 'string' ? selected : (selected as { path: string }).path;
       const content = await readTextFile(filePath);
-      const parsed = await commands.parseBookmarksHtml(content);
+
+      // 拡張子に応じてパーサーを選択
+      const isJson = filePath.toLowerCase().endsWith('.json');
+      const parsed = isJson
+        ? await commands.parseJsonLinks(content)
+        : await commands.parseBookmarksHtml(content);
+
       setItems(parsed);
       setState('preview');
     } catch (err) {
@@ -155,10 +165,10 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
                       marginBottom: 6,
                     }}
                   >
-                    ブラウザからエクスポートしたHTMLファイルを選択
+                    HTMLブックマークまたはJSONファイルを選択
                   </p>
                   <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                    Chrome、Firefox、Safari、Edge のブックマークに対応
+                    ブラウザブックマーク(.html) または JSON配列(.json)に対応
                   </p>
                 </div>
                 <button

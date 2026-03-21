@@ -20,6 +20,71 @@ pub struct ImportResult {
     pub categories_created: i64,
 }
 
+/// JSONファイルの内容を解析してインポートアイテムを返す
+/// 対応形式:
+/// 1. [{ "url": "...", "title": "...", "folder": "..." }, ...]
+/// 2. [{ "url": "...", "name": "...", "category": "..." }, ...]
+/// 3. [{ "link": "...", "title": "..." }, ...]
+#[tauri::command]
+pub fn parse_json_links(content: String) -> Result<Vec<ImportItem>, String> {
+    let parsed: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| format!("JSON解析エラー: {}", e))?;
+
+    let arr = parsed
+        .as_array()
+        .ok_or("JSONはリンクの配列である必要があります")?;
+
+    let mut items = Vec::new();
+
+    for (i, item) in arr.iter().enumerate() {
+        let obj = item
+            .as_object()
+            .ok_or(format!("{}番目の要素がオブジェクトではありません", i + 1))?;
+
+        // URL: "url" or "link" or "href"
+        let url = obj
+            .get("url")
+            .or_else(|| obj.get("link"))
+            .or_else(|| obj.get("href"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        if url.is_empty() || !url.starts_with("http") {
+            continue;
+        }
+
+        // タイトル: "title" or "name" or "label"（なければURLをタイトルに）
+        let title = obj
+            .get("title")
+            .or_else(|| obj.get("name"))
+            .or_else(|| obj.get("label"))
+            .and_then(|v| v.as_str())
+            .unwrap_or(&url)
+            .to_string();
+
+        // フォルダ: "folder" or "category" or "group"
+        let folder = obj
+            .get("folder")
+            .or_else(|| obj.get("category"))
+            .or_else(|| obj.get("group"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        items.push(ImportItem {
+            url,
+            title,
+            folder,
+        });
+    }
+
+    if items.is_empty() {
+        return Err("有効なリンクが見つかりませんでした".to_string());
+    }
+
+    Ok(items)
+}
+
 /// ブックマークHTMLファイルの内容を解析してインポートアイテムを返す
 #[tauri::command]
 pub fn parse_bookmarks_html(content: String) -> Result<Vec<ImportItem>, String> {
