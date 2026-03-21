@@ -24,9 +24,14 @@ export function Toolbar({ onAddLink, searchQuery, onSearchChange }: ToolbarProps
     >
       {/* 検索バー */}
       <div
-        className="flex flex-1 items-center gap-2.5 rounded-lg px-3"
         style={{
-          height: '34px',
+          display: 'flex',
+          flex: 1,
+          alignItems: 'center',
+          gap: 10,
+          height: 36,
+          padding: '0 14px',
+          borderRadius: 'var(--radius-md)',
           background: 'var(--bg-input)',
           border: '1px solid var(--border-medium)',
         }}
@@ -37,15 +42,32 @@ export function Toolbar({ onAddLink, searchQuery, onSearchChange }: ToolbarProps
           placeholder="リンクを検索...  ⌘K"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="flex-1 bg-transparent text-[13px] outline-none"
-          style={{ color: 'var(--text-primary)' }}
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            fontSize: 13,
+            color: 'var(--text-primary)',
+            fontFamily: 'inherit',
+          }}
         />
         {searchQuery && (
           <button
             type="button"
             onClick={() => onSearchChange('')}
-            className="flex h-4 w-4 items-center justify-center rounded-full transition-colors"
-            style={{ background: 'var(--bg-elevated)', color: 'var(--text-tertiary)' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 18,
+              height: 18,
+              borderRadius: '50%',
+              border: 'none',
+              background: 'var(--bg-elevated)',
+              color: 'var(--text-tertiary)',
+              cursor: 'pointer',
+            }}
           >
             <X size={10} />
           </button>
