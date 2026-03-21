@@ -40,7 +40,7 @@
     ]
   },
   "plugins": {
-    "global-shortcut": {},
+    "global-shortcut": null,
     "shell": {
       "open": true
     }
