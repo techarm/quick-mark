@@ -111,7 +111,10 @@ function App() {
           // 未登録の場合は無視
         }
 
-        await register('CommandOrControl+Shift+Space', async () => {
+        await register('CommandOrControl+Shift+Space', async (event) => {
+          // キー解放時は無視（押下時のみ処理）
+          if (event.state === 'Released') return;
+
           const win = getCurrentWindow();
           const store = useUIStore.getState();
 
