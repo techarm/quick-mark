@@ -25,7 +25,8 @@
       },
       "a11y": {
         "noLabelWithoutControl": "off",
-        "useSemanticElements": "off"
+        "useSemanticElements": "off",
+        "noStaticElementInteractions": "off"
       }
     }
   },

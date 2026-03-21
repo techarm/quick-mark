@@ -5,6 +5,7 @@ import { LinkDetail } from './components/main/LinkDetail';
 import { LinkList } from './components/main/LinkList';
 import { Sidebar } from './components/main/Sidebar';
 import { Toolbar } from './components/main/Toolbar';
+import { SearchPalette } from './components/search/SearchPalette';
 import { TitleBar } from './components/TitleBar';
 import * as commands from './lib/commands';
 import type { Category, CreateLinkInput, Link } from './lib/types';
@@ -15,6 +16,7 @@ function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [searchPaletteOpen, setSearchPaletteOpen] = useState(false);
 
   const { activeFilter, activeCategoryId, selectedLinkId, detailPanelOpen } = useUIStore();
 
@@ -57,6 +59,29 @@ function App() {
   // 起動時に期限切れリンクをクリーンアップ
   useEffect(() => {
     commands.cleanupExpiredLinks().catch(console.error);
+  }, []);
+
+  // グローバルキーボードショートカット（アプリ内）
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+Shift+L: 検索パレット
+      if (e.metaKey && e.shiftKey && e.key === 'l') {
+        e.preventDefault();
+        setSearchPaletteOpen((prev) => !prev);
+      }
+      // Cmd+Shift+A: リンク追加
+      if (e.metaKey && e.shiftKey && e.key === 'a') {
+        e.preventDefault();
+        setAddDialogOpen(true);
+      }
+      // Cmd+K: 検索パレット (代替)
+      if (e.metaKey && e.key === 'k') {
+        e.preventDefault();
+        setSearchPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // リンクを開く
@@ -125,6 +150,13 @@ function App() {
         {/* 詳細パネル */}
         {detailPanelOpen && <LinkDetail link={selectedLink} onOpen={handleOpenLink} />}
       </div>
+
+      {/* 検索パレット（Spotlight風） */}
+      <SearchPalette
+        open={searchPaletteOpen}
+        onOpenChange={setSearchPaletteOpen}
+        onOpenLink={handleOpenLink}
+      />
 
       {/* リンク追加ダイアログ */}
       <AddLinkDialog
