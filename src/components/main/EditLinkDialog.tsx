@@ -1,34 +1,57 @@
 import * as Dialog from '@radix-ui/react-dialog';
-import { Globe, Link2, X } from 'lucide-react';
-import { useState } from 'react';
-import * as commands from '../../lib/commands';
-import type { Category, CreateLinkInput } from '../../lib/types';
+import { Pencil, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import type { Category, Link, UpdateLinkInput } from '../../lib/types';
 
-interface AddLinkDialogProps {
+interface EditLinkDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  link: Link | null;
   categories: Category[];
-  onSubmit: (input: CreateLinkInput) => void;
+  onSubmit: (input: UpdateLinkInput) => void;
 }
 
-export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddLinkDialogProps) {
+export function EditLinkDialog({
+  open,
+  onOpenChange,
+  link,
+  categories,
+  onSubmit,
+}: EditLinkDialogProps) {
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState<string>('');
   const [isTemporary, setIsTemporary] = useState(false);
   const [expiryDays, setExpiryDays] = useState(7);
-  const [fetchingBrowser, setFetchingBrowser] = useState(false);
+
+  // リンクが変わったらフォームを初期化
+  useEffect(() => {
+    if (link) {
+      setUrl(link.url);
+      setTitle(link.title);
+      setDescription(link.description || '');
+      setCategoryId(link.category_id || '');
+      setIsTemporary(link.is_temporary);
+      if (link.expires_at) {
+        const diffMs = new Date(link.expires_at).getTime() - Date.now();
+        setExpiryDays(Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24))));
+      } else {
+        setExpiryDays(7);
+      }
+    }
+  }, [link]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url.trim()) return;
+    if (!link || !url.trim()) return;
 
     const expiresAt = isTemporary
       ? new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString()
       : undefined;
 
     onSubmit({
+      id: link.id,
       url: url.trim(),
       title: title.trim() || url.trim(),
       description: description.trim() || undefined,
@@ -37,30 +60,7 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
       expires_at: expiresAt,
     });
 
-    setUrl('');
-    setTitle('');
-    setDescription('');
-    setCategoryId('');
-    setIsTemporary(false);
-    setExpiryDays(7);
     onOpenChange(false);
-  };
-
-  const handleFetchBrowserUrl = async () => {
-    setFetchingBrowser(true);
-    try {
-      const info = await commands.getActiveBrowserUrl();
-      if (info) {
-        setUrl(info.url);
-        if (info.title && !title.trim()) {
-          setTitle(info.title);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to get browser URL:', err);
-    } finally {
-      setFetchingBrowser(false);
-    }
   };
 
   return (
@@ -92,9 +92,9 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
                   background: 'var(--accent-subtle)',
                 }}
               >
-                <Link2 size={14} style={{ color: 'var(--accent-primary)' }} />
+                <Pencil size={14} style={{ color: 'var(--accent-primary)' }} />
               </div>
-              リンクを追加
+              リンクを編集
             </Dialog.Title>
             <Dialog.Close asChild>
               <button type="button" className="dialog-close-btn">
@@ -113,35 +113,14 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
                 <label className="form-label">
                   URL<span className="required">*</span>
                 </label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://example.com"
-                    className="input-field"
-                    style={{ flex: 1 }}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={handleFetchBrowserUrl}
-                    disabled={fetchingBrowser}
-                    className="btn btn-secondary"
-                    style={{
-                      height: 38,
-                      padding: '0 12px',
-                      gap: 6,
-                      flexShrink: 0,
-                      fontSize: 12,
-                      opacity: fetchingBrowser ? 0.6 : 1,
-                    }}
-                    title="ブラウザから取得"
-                  >
-                    <Globe size={14} />
-                    ブラウザから取得
-                  </button>
-                </div>
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  className="input-field"
+                  required
+                />
               </div>
 
               <div className="form-field">
@@ -150,7 +129,7 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="リンクのタイトル（空欄ならURLから取得）"
+                  placeholder="リンクのタイトル"
                   className="input-field"
                 />
               </div>
@@ -235,7 +214,7 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
                 </button>
               </Dialog.Close>
               <button type="submit" className="btn btn-primary">
-                追加する
+                保存する
               </button>
             </div>
           </form>

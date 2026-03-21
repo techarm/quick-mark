@@ -1,4 +1,15 @@
-import { Clock, FolderOpen, Globe, Hourglass, Plus, Timer } from 'lucide-react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import {
+  Clock,
+  FolderOpen,
+  Globe,
+  Hourglass,
+  Pencil,
+  Pin,
+  Plus,
+  Timer,
+  Trash2,
+} from 'lucide-react';
 import type { Category, SmartFilter } from '../../lib/types';
 import { useUIStore } from '../../stores/ui.store';
 
@@ -9,7 +20,11 @@ interface SidebarProps {
     recent: number;
     temporary: number;
     expired: number;
+    pinned: number;
   };
+  onAddCategory?: () => void;
+  onEditCategory?: (category: Category) => void;
+  onDeleteCategory?: (category: Category) => void;
 }
 
 const smartFilters: { id: SmartFilter; label: string; icon: typeof Globe }[] = [
@@ -17,9 +32,16 @@ const smartFilters: { id: SmartFilter; label: string; icon: typeof Globe }[] = [
   { id: 'recent', label: '最近追加', icon: Clock },
   { id: 'temporary', label: '一時リンク', icon: Timer },
   { id: 'expired', label: '期限切れ', icon: Hourglass },
+  { id: 'pinned', label: 'ピン留め', icon: Pin },
 ];
 
-export function Sidebar({ categories, linkCounts }: SidebarProps) {
+export function Sidebar({
+  categories,
+  linkCounts,
+  onAddCategory,
+  onEditCategory,
+  onDeleteCategory,
+}: SidebarProps) {
   const { activeFilter, activeCategoryId, setActiveFilter, setActiveCategoryId } = useUIStore();
 
   const getCount = (filter: SmartFilter) => {
@@ -32,6 +54,8 @@ export function Sidebar({ categories, linkCounts }: SidebarProps) {
         return linkCounts.temporary;
       case 'expired':
         return linkCounts.expired;
+      case 'pinned':
+        return linkCounts.pinned;
       default:
         return 0;
     }
@@ -102,6 +126,7 @@ export function Sidebar({ categories, linkCounts }: SidebarProps) {
           <SectionHeader>カテゴリ</SectionHeader>
           <button
             type="button"
+            onClick={onAddCategory}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -156,6 +181,8 @@ export function Sidebar({ categories, linkCounts }: SidebarProps) {
                 allCategories={categories}
                 active={activeCategoryId === cat.id}
                 onSelect={setActiveCategoryId}
+                onEdit={onEditCategory}
+                onDelete={onDeleteCategory}
                 depth={0}
               />
             ))}
@@ -205,6 +232,8 @@ function CategoryItem({
   allCategories,
   active,
   onSelect,
+  onEdit,
+  onDelete,
   depth,
 }: {
   category: Category;
@@ -212,38 +241,74 @@ function CategoryItem({
   allCategories: Category[];
   active: boolean;
   onSelect: (id: string) => void;
+  onEdit?: (category: Category) => void;
+  onDelete?: (category: Category) => void;
   depth: number;
 }) {
   const getChildren = (parentId: string) => allCategories.filter((c) => c.parent_id === parentId);
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={() => onSelect(category.id)}
-        className="sidebar-item"
-        style={{
-          paddingLeft: `${12 + depth * 20}px`,
-          ...(active
-            ? {
-                background: 'var(--bg-active)',
-                color: 'var(--accent-primary)',
-                fontWeight: 500,
-              }
-            : {}),
-        }}
-      >
-        <FolderOpen
-          size={16}
-          style={{
-            color: category.color || 'var(--text-tertiary)',
-            opacity: active ? 1 : 0.6,
-            flexShrink: 0,
-          }}
-        />
-        <span className="flex-1 truncate">{category.name}</span>
-        {category.link_count > 0 && <CountBadge active={active}>{category.link_count}</CountBadge>}
-      </button>
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          <button
+            type="button"
+            onClick={() => onSelect(category.id)}
+            onContextMenu={(e) => {
+              // 右クリックでドロップダウンが開くようにする
+              e.preventDefault();
+            }}
+            className="sidebar-item"
+            style={{
+              paddingLeft: `${12 + depth * 20}px`,
+              ...(active
+                ? {
+                    background: 'var(--bg-active)',
+                    color: 'var(--accent-primary)',
+                    fontWeight: 500,
+                  }
+                : {}),
+            }}
+          >
+            <FolderOpen
+              size={16}
+              style={{
+                color: category.color || 'var(--text-tertiary)',
+                opacity: active ? 1 : 0.6,
+                flexShrink: 0,
+              }}
+            />
+            <span className="flex-1 truncate">{category.name}</span>
+            {category.link_count > 0 && (
+              <CountBadge active={active}>{category.link_count}</CountBadge>
+            )}
+          </button>
+        </DropdownMenu.Trigger>
+        {(onEdit || onDelete) && (
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content className="dropdown-menu-content" sideOffset={4} align="start">
+              {onEdit && (
+                <DropdownMenu.Item className="dropdown-menu-item" onSelect={() => onEdit(category)}>
+                  <Pencil size={14} />
+                  編集
+                </DropdownMenu.Item>
+              )}
+              {onDelete && (
+                <>
+                  <DropdownMenu.Separator className="dropdown-menu-separator" />
+                  <DropdownMenu.Item
+                    className="dropdown-menu-item dropdown-menu-item-danger"
+                    onSelect={() => onDelete(category)}
+                  >
+                    <Trash2 size={14} />
+                    削除
+                  </DropdownMenu.Item>
+                </>
+              )}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        )}
+      </DropdownMenu.Root>
       {childCategories.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {childCategories.map((child) => (
@@ -254,6 +319,8 @@ function CategoryItem({
               allCategories={allCategories}
               active={useUIStore.getState().activeCategoryId === child.id}
               onSelect={onSelect}
+              onEdit={onEdit}
+              onDelete={onDelete}
               depth={depth + 1}
             />
           ))}

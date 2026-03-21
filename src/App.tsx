@@ -12,6 +12,8 @@ async function safeOpenUrl(url: string) {
 import { useCallback, useEffect, useState } from 'react';
 import { ImportDialog } from './components/ImportDialog';
 import { AddLinkDialog } from './components/main/AddLinkDialog';
+import { CategoryDialog } from './components/main/CategoryDialog';
+import { EditLinkDialog } from './components/main/EditLinkDialog';
 import { LinkDetail } from './components/main/LinkDetail';
 import { LinkList } from './components/main/LinkList';
 import { Sidebar } from './components/main/Sidebar';
@@ -19,7 +21,13 @@ import { Toolbar } from './components/main/Toolbar';
 import { SearchPalette } from './components/search/SearchPalette';
 import { TitleBar } from './components/TitleBar';
 import * as commands from './lib/commands';
-import type { Category, CreateLinkInput, Link } from './lib/types';
+import type {
+  Category,
+  CreateCategoryInput,
+  CreateLinkInput,
+  Link,
+  UpdateLinkInput,
+} from './lib/types';
 import { useUIStore } from './stores/ui.store';
 
 function App() {
@@ -28,6 +36,14 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+
+  // リンク編集
+  const [editingLink, setEditingLink] = useState<Link | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  // カテゴリ CRUD
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   const {
     activeFilter,
@@ -183,6 +199,114 @@ function App() {
     [loadLinks, loadCategories],
   );
 
+  // リンクを編集
+  const handleEditLink = useCallback((link: Link) => {
+    setEditingLink(link);
+    setEditDialogOpen(true);
+  }, []);
+
+  // リンクを更新
+  const handleUpdateLink = useCallback(
+    async (input: UpdateLinkInput) => {
+      try {
+        await commands.updateLink(input);
+        loadLinks();
+        loadCategories();
+      } catch (err) {
+        console.error('Failed to update link:', err);
+      }
+    },
+    [loadLinks, loadCategories],
+  );
+
+  // リンクを削除
+  const handleDeleteLink = useCallback(
+    async (link: Link) => {
+      try {
+        await commands.deleteLink(link.id);
+        const store = useUIStore.getState();
+        if (store.selectedLinkId === link.id) {
+          store.setSelectedLinkId(null);
+          store.setDetailPanelOpen(false);
+        }
+        loadLinks();
+        loadCategories();
+      } catch (err) {
+        console.error('Failed to delete link:', err);
+      }
+    },
+    [loadLinks, loadCategories],
+  );
+
+  // ピン留めトグル
+  const handleTogglePin = useCallback(
+    async (link: Link) => {
+      try {
+        await commands.updateLink({
+          id: link.id,
+          is_pinned: !link.is_pinned,
+        });
+        loadLinks();
+      } catch (err) {
+        console.error('Failed to toggle pin:', err);
+      }
+    },
+    [loadLinks],
+  );
+
+  // カテゴリ追加
+  const handleAddCategory = useCallback(() => {
+    setEditingCategory(null);
+    setCategoryDialogOpen(true);
+  }, []);
+
+  // カテゴリ編集
+  const handleEditCategory = useCallback((category: Category) => {
+    setEditingCategory(category);
+    setCategoryDialogOpen(true);
+  }, []);
+
+  // カテゴリ削除
+  const handleDeleteCategory = useCallback(
+    async (category: Category) => {
+      try {
+        await commands.deleteCategory(category.id);
+        const store = useUIStore.getState();
+        if (store.activeCategoryId === category.id) {
+          store.setActiveFilter('all');
+        }
+        loadCategories();
+        loadLinks();
+      } catch (err) {
+        console.error('Failed to delete category:', err);
+      }
+    },
+    [loadCategories, loadLinks],
+  );
+
+  // カテゴリ作成/更新
+  const handleCategorySubmit = useCallback(
+    async (input: CreateCategoryInput & { id?: string }) => {
+      try {
+        if (input.id) {
+          await commands.updateCategory({
+            id: input.id,
+            name: input.name,
+            parent_id: input.parent_id,
+            icon: input.icon,
+            color: input.color,
+          });
+        } else {
+          await commands.createCategory(input);
+        }
+        loadCategories();
+      } catch (err) {
+        console.error('Failed to save category:', err);
+      }
+    },
+    [loadCategories],
+  );
+
   // リンクカウントを計算
   const linkCounts = {
     all: links.length,
@@ -191,6 +315,7 @@ function App() {
     expired: links.filter(
       (l) => l.is_temporary && l.expires_at && new Date(l.expires_at) < new Date(),
     ).length,
+    pinned: links.filter((l) => l.is_pinned).length,
   };
 
   const selectedLink = links.find((l) => l.id === selectedLinkId) ?? null;
@@ -208,7 +333,13 @@ function App() {
           }}
         >
           <TitleBar />
-          <Sidebar categories={categories} linkCounts={linkCounts} />
+          <Sidebar
+            categories={categories}
+            linkCounts={linkCounts}
+            onAddCategory={handleAddCategory}
+            onEditCategory={handleEditCategory}
+            onDeleteCategory={handleDeleteCategory}
+          />
         </aside>
 
         {/* メインエリア */}
@@ -218,14 +349,29 @@ function App() {
         >
           <Toolbar
             onAddLink={() => setAddDialogOpen(true)}
+            onImport={() => setImportDialogOpen(true)}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
           />
-          <LinkList links={links} onOpen={handleOpenLink} />
+          <LinkList
+            links={links}
+            onOpen={handleOpenLink}
+            onEdit={handleEditLink}
+            onDelete={handleDeleteLink}
+            onTogglePin={handleTogglePin}
+          />
         </main>
 
         {/* 詳細パネル */}
-        {detailPanelOpen && <LinkDetail link={selectedLink} onOpen={handleOpenLink} />}
+        {detailPanelOpen && (
+          <LinkDetail
+            link={selectedLink}
+            onOpen={handleOpenLink}
+            onEdit={handleEditLink}
+            onDelete={handleDeleteLink}
+            onTogglePin={handleTogglePin}
+          />
+        )}
       </div>
 
       {/* 検索パレット（Spotlight風） */}
@@ -241,6 +387,24 @@ function App() {
         onOpenChange={setAddDialogOpen}
         categories={categories}
         onSubmit={handleAddLink}
+      />
+
+      {/* リンク編集ダイアログ */}
+      <EditLinkDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        link={editingLink}
+        categories={categories}
+        onSubmit={handleUpdateLink}
+      />
+
+      {/* カテゴリダイアログ */}
+      <CategoryDialog
+        open={categoryDialogOpen}
+        onOpenChange={setCategoryDialogOpen}
+        category={editingCategory}
+        categories={categories}
+        onSubmit={handleCategorySubmit}
       />
 
       {/* インポートダイアログ */}

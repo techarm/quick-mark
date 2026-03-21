@@ -1,13 +1,17 @@
-import { ExternalLink, MoreHorizontal, Pin, Timer } from 'lucide-react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { ExternalLink, MoreHorizontal, Pencil, Pin, PinOff, Timer, Trash2 } from 'lucide-react';
 import type { Link } from '../../lib/types';
 import { useUIStore } from '../../stores/ui.store';
 
 interface LinkListProps {
   links: Link[];
   onOpen: (link: Link) => void;
+  onEdit?: (link: Link) => void;
+  onDelete?: (link: Link) => void;
+  onTogglePin?: (link: Link) => void;
 }
 
-export function LinkList({ links, onOpen }: LinkListProps) {
+export function LinkList({ links, onOpen, onEdit, onDelete, onTogglePin }: LinkListProps) {
   const { viewMode, selectedLinkId, setSelectedLinkId } = useUIStore();
 
   if (links.length === 0) {
@@ -109,6 +113,9 @@ export function LinkList({ links, onOpen }: LinkListProps) {
             selected={selectedLinkId === link.id}
             onSelect={() => setSelectedLinkId(link.id)}
             onOpen={() => onOpen(link)}
+            onEdit={onEdit ? () => onEdit(link) : undefined}
+            onDelete={onDelete ? () => onDelete(link) : undefined}
+            onTogglePin={onTogglePin ? () => onTogglePin(link) : undefined}
           />
         ))}
       </div>
@@ -124,9 +131,91 @@ export function LinkList({ links, onOpen }: LinkListProps) {
           selected={selectedLinkId === link.id}
           onSelect={() => setSelectedLinkId(link.id)}
           onOpen={() => onOpen(link)}
+          onEdit={onEdit ? () => onEdit(link) : undefined}
+          onDelete={onDelete ? () => onDelete(link) : undefined}
+          onTogglePin={onTogglePin ? () => onTogglePin(link) : undefined}
         />
       ))}
     </div>
+  );
+}
+
+function LinkRowMenu({
+  link,
+  onOpen,
+  onEdit,
+  onDelete,
+  onTogglePin,
+}: {
+  link: Link;
+  onOpen: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onTogglePin?: () => void;
+}) {
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 24,
+            height: 24,
+            border: 'none',
+            borderRadius: 'var(--radius-sm)',
+            background: 'transparent',
+            color: 'var(--text-tertiary)',
+            cursor: 'pointer',
+            opacity: 0,
+            transition: 'opacity 150ms ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '1';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '0';
+          }}
+        >
+          <MoreHorizontal size={14} />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content className="dropdown-menu-content" sideOffset={4} align="end">
+          <DropdownMenu.Item className="dropdown-menu-item" onSelect={onOpen}>
+            <ExternalLink size={14} />
+            ブラウザで開く
+          </DropdownMenu.Item>
+          {onEdit && (
+            <DropdownMenu.Item className="dropdown-menu-item" onSelect={onEdit}>
+              <Pencil size={14} />
+              編集
+            </DropdownMenu.Item>
+          )}
+          {onTogglePin && (
+            <DropdownMenu.Item className="dropdown-menu-item" onSelect={onTogglePin}>
+              {link.is_pinned ? <PinOff size={14} /> : <Pin size={14} />}
+              {link.is_pinned ? 'ピン留め解除' : 'ピン留め'}
+            </DropdownMenu.Item>
+          )}
+          {onDelete && (
+            <>
+              <DropdownMenu.Separator className="dropdown-menu-separator" />
+              <DropdownMenu.Item
+                className="dropdown-menu-item dropdown-menu-item-danger"
+                onSelect={onDelete}
+              >
+                <Trash2 size={14} />
+                削除
+              </DropdownMenu.Item>
+            </>
+          )}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
   );
 }
 
@@ -135,11 +224,17 @@ function LinkRow({
   selected,
   onSelect,
   onOpen,
+  onEdit,
+  onDelete,
+  onTogglePin,
 }: {
   link: Link;
   selected: boolean;
   onSelect: () => void;
   onOpen: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onTogglePin?: () => void;
 }) {
   const domain = getDomain(link.url);
   const expiryInfo = getExpiryInfo(link);
@@ -261,32 +356,13 @@ function LinkRow({
       )}
 
       {/* メニュー */}
-      <button
-        type="button"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 24,
-          height: 24,
-          border: 'none',
-          borderRadius: 'var(--radius-sm)',
-          background: 'transparent',
-          color: 'var(--text-tertiary)',
-          cursor: 'pointer',
-          opacity: 0,
-          transition: 'opacity 150ms ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.opacity = '1';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.opacity = '0';
-        }}
-      >
-        <MoreHorizontal size={14} />
-      </button>
+      <LinkRowMenu
+        link={link}
+        onOpen={onOpen}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onTogglePin={onTogglePin}
+      />
     </div>
   );
 }
@@ -296,11 +372,17 @@ function LinkCard({
   selected,
   onSelect,
   onOpen,
+  onEdit,
+  onDelete,
+  onTogglePin,
 }: {
   link: Link;
   selected: boolean;
   onSelect: () => void;
   onOpen: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onTogglePin?: () => void;
 }) {
   const domain = getDomain(link.url);
   const expiryInfo = getExpiryInfo(link);
@@ -320,8 +402,20 @@ function LinkCard({
         cursor: 'pointer',
         borderColor: selected ? 'var(--border-focus)' : undefined,
         borderLeft: link.is_temporary ? '3px solid var(--accent-warm)' : undefined,
+        position: 'relative',
       }}
     >
+      {/* カードメニュー */}
+      <div style={{ position: 'absolute', top: 8, right: 8 }}>
+        <LinkRowMenu
+          link={link}
+          onOpen={onOpen}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onTogglePin={onTogglePin}
+        />
+      </div>
+
       <div
         style={{
           display: 'flex',

@@ -1,13 +1,27 @@
-import { Calendar, Clock, ExternalLink, Hash, Link2, Pin, X } from 'lucide-react';
+import {
+  Calendar,
+  Clock,
+  ExternalLink,
+  Hash,
+  Link2,
+  Pencil,
+  Pin,
+  PinOff,
+  Trash2,
+  X,
+} from 'lucide-react';
 import type { Link } from '../../lib/types';
 import { useUIStore } from '../../stores/ui.store';
 
 interface LinkDetailProps {
   link: Link | null;
   onOpen: (link: Link) => void;
+  onEdit?: (link: Link) => void;
+  onDelete?: (link: Link) => void;
+  onTogglePin?: (link: Link) => void;
 }
 
-export function LinkDetail({ link, onOpen }: LinkDetailProps) {
+export function LinkDetail({ link, onOpen, onEdit, onDelete, onTogglePin }: LinkDetailProps) {
   const { setDetailPanelOpen, setSelectedLinkId } = useUIStore();
 
   if (!link) return null;
@@ -228,6 +242,9 @@ export function LinkDetail({ link, onOpen }: LinkDetailProps) {
         style={{
           padding: 16,
           borderTop: '1px solid var(--border-subtle)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
         }}
       >
         <button
@@ -242,6 +259,45 @@ export function LinkDetail({ link, onOpen }: LinkDetailProps) {
           <ExternalLink size={14} />
           ブラウザで開く
         </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {onEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(link)}
+              className="btn btn-secondary"
+              style={{ flex: 1, gap: 6 }}
+            >
+              <Pencil size={13} />
+              編集
+            </button>
+          )}
+          {onTogglePin && (
+            <button
+              type="button"
+              onClick={() => onTogglePin(link)}
+              className="btn btn-secondary"
+              style={{ flex: 1, gap: 6 }}
+            >
+              {link.is_pinned ? <PinOff size={13} /> : <Pin size={13} />}
+              {link.is_pinned ? '解除' : 'ピン留め'}
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(link)}
+              className="btn btn-ghost"
+              style={{
+                flex: 1,
+                gap: 6,
+                color: 'var(--accent-danger)',
+              }}
+            >
+              <Trash2 size={13} />
+              削除
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
