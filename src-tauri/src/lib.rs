@@ -32,6 +32,8 @@ pub fn run() {
             search_links,
             open_link,
             cleanup_expired_links,
+            move_links_to_category,
+            bulk_delete_links,
             // ブラウザ
             get_active_browser_url,
             fetch_url_info,

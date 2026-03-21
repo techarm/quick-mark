@@ -404,3 +404,45 @@ pub fn refresh_favicons(
 
     Ok(updated)
 }
+
+/// 複数リンクを別カテゴリに一括移動
+#[tauri::command]
+pub fn move_links_to_category(
+    db: State<'_, Mutex<AppDb>>,
+    link_ids: Vec<String>,
+    category_id: Option<String>,
+) -> Result<i64, String> {
+    let db = db.lock().map_err(|e| e.to_string())?;
+    let conn = &db.conn;
+
+    let mut moved = 0i64;
+    for id in &link_ids {
+        conn.execute(
+            "UPDATE links SET category_id = ?1, updated_at = datetime('now') WHERE id = ?2",
+            params![category_id, id],
+        )
+        .map_err(|e| e.to_string())?;
+        moved += 1;
+    }
+
+    Ok(moved)
+}
+
+/// 複数リンクを一括削除
+#[tauri::command]
+pub fn bulk_delete_links(
+    db: State<'_, Mutex<AppDb>>,
+    link_ids: Vec<String>,
+) -> Result<i64, String> {
+    let db = db.lock().map_err(|e| e.to_string())?;
+    let conn = &db.conn;
+
+    let mut deleted = 0i64;
+    for id in &link_ids {
+        conn.execute("DELETE FROM links WHERE id = ?1", params![id])
+            .map_err(|e| e.to_string())?;
+        deleted += 1;
+    }
+
+    Ok(deleted)
+}

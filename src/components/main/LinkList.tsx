@@ -1,5 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ExternalLink, MoreHorizontal, Pencil, Pin, PinOff, Timer, Trash2 } from 'lucide-react';
+import { useCallback, useRef } from 'react';
 import type { Link } from '../../lib/types';
 import { useUIStore } from '../../stores/ui.store';
 
@@ -12,7 +13,57 @@ interface LinkListProps {
 }
 
 export function LinkList({ links, onOpen, onEdit, onDelete, onTogglePin }: LinkListProps) {
-  const { viewMode, selectedLinkId, setSelectedLinkId } = useUIStore();
+  const {
+    viewMode,
+    selectedLinkId,
+    setSelectedLinkId,
+    selectedLinkIds,
+    toggleLinkSelection,
+    addRangeSelection,
+    clearSelection,
+  } = useUIStore();
+  const lastClickedIndex = useRef<number>(-1);
+
+  const handleItemClick = useCallback(
+    (link: Link, index: number, e: React.MouseEvent) => {
+      const isMultiSelect = selectedLinkIds.size > 0;
+
+      if (e.metaKey || e.ctrlKey) {
+        // Cmd+Click: 個別追加/解除
+        toggleLinkSelection(link.id);
+        lastClickedIndex.current = index;
+      } else if (e.shiftKey && lastClickedIndex.current >= 0) {
+        // Shift+Click: 範囲選択
+        const start = Math.min(lastClickedIndex.current, index);
+        const end = Math.max(lastClickedIndex.current, index);
+        const rangeIds = links.slice(start, end + 1).map((l) => l.id);
+        addRangeSelection(rangeIds);
+      } else if (isMultiSelect) {
+        // 複数選択中に通常クリック → 選択解除して単一選択
+        clearSelection();
+        setSelectedLinkId(link.id);
+        lastClickedIndex.current = index;
+      } else {
+        // 通常クリック: 単一選択
+        setSelectedLinkId(link.id);
+        lastClickedIndex.current = index;
+      }
+    },
+    [
+      links,
+      selectedLinkIds,
+      toggleLinkSelection,
+      addRangeSelection,
+      clearSelection,
+      setSelectedLinkId,
+    ],
+  );
+
+  const isSelected = useCallback(
+    (linkId: string) =>
+      selectedLinkIds.has(linkId) || (selectedLinkIds.size === 0 && selectedLinkId === linkId),
+    [selectedLinkIds, selectedLinkId],
+  );
 
   if (links.length === 0) {
     return (
@@ -108,12 +159,12 @@ export function LinkList({ links, onOpen, onEdit, onDelete, onTogglePin }: LinkL
           justifyContent: 'center',
         }}
       >
-        {links.map((link) => (
+        {links.map((link, index) => (
           <LinkCard
             key={link.id}
             link={link}
-            selected={selectedLinkId === link.id}
-            onSelect={() => setSelectedLinkId(link.id)}
+            selected={isSelected(link.id)}
+            onSelect={(e) => handleItemClick(link, index, e)}
             onOpen={() => onOpen(link)}
             onEdit={onEdit ? () => onEdit(link) : undefined}
             onDelete={onDelete ? () => onDelete(link) : undefined}
@@ -126,12 +177,12 @@ export function LinkList({ links, onOpen, onEdit, onDelete, onTogglePin }: LinkL
 
   return (
     <div style={{ flex: 1, overflow: 'auto' }}>
-      {links.map((link) => (
+      {links.map((link, index) => (
         <LinkRow
           key={link.id}
           link={link}
-          selected={selectedLinkId === link.id}
-          onSelect={() => setSelectedLinkId(link.id)}
+          selected={isSelected(link.id)}
+          onSelect={(e) => handleItemClick(link, index, e)}
           onOpen={() => onOpen(link)}
           onEdit={onEdit ? () => onEdit(link) : undefined}
           onDelete={onDelete ? () => onDelete(link) : undefined}
@@ -233,7 +284,7 @@ function LinkRow({
 }: {
   link: Link;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (e: React.MouseEvent) => void;
   onOpen: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -381,7 +432,7 @@ function LinkCard({
 }: {
   link: Link;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (e: React.MouseEvent) => void;
   onOpen: () => void;
   onEdit?: () => void;
   onDelete?: () => void;

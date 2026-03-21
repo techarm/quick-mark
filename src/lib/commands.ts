@@ -63,6 +63,17 @@ export async function refreshFavicons(): Promise<number> {
   return invoke('refresh_favicons');
 }
 
+export async function moveLinksToCategory(
+  linkIds: string[],
+  categoryId: string | null,
+): Promise<number> {
+  return invoke('move_links_to_category', { linkIds, categoryId });
+}
+
+export async function bulkDeleteLinks(linkIds: string[]): Promise<number> {
+  return invoke('bulk_delete_links', { linkIds });
+}
+
 // === カテゴリ ===
 
 export async function getCategories(): Promise<Category[]> {

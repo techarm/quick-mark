@@ -12,6 +12,7 @@ async function safeOpenUrl(url: string) {
 import { useCallback, useEffect, useState } from 'react';
 import { ImportDialog } from './components/ImportDialog';
 import { AddLinkDialog } from './components/main/AddLinkDialog';
+import { BulkActionBar } from './components/main/BulkActionBar';
 import { CategoryDialog } from './components/main/CategoryDialog';
 import { EditLinkDialog } from './components/main/EditLinkDialog';
 import { LinkDetail } from './components/main/LinkDetail';
@@ -63,7 +64,14 @@ function App() {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
-  const { activeFilter, activeCategoryId, selectedLinkId, detailPanelOpen } = useUIStore();
+  const {
+    activeFilter,
+    activeCategoryId,
+    selectedLinkId,
+    detailPanelOpen,
+    selectedLinkIds,
+    clearSelection,
+  } = useUIStore();
 
   // データの読み込み
   const loadLinks = useCallback(async () => {
@@ -163,10 +171,26 @@ function App() {
         e.preventDefault();
         setAddDialogOpen(true);
       }
+      // Cmd+A: リンク全選択（入力フォーカス中は除外）
+      if (e.metaKey && e.key === 'a' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+          e.preventDefault();
+          useUIStore.getState().selectAllLinks(links.map((l) => l.id));
+        }
+      }
+      // Escape: 選択解除
+      if (e.key === 'Escape') {
+        const { selectedLinkIds } = useUIStore.getState();
+        if (selectedLinkIds.size > 0) {
+          e.preventDefault();
+          useUIStore.getState().clearSelection();
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [links]);
 
   // リンクを開く
   const handleOpenLink = useCallback(
@@ -250,6 +274,37 @@ function App() {
     },
     [loadLinks],
   );
+
+  // 一括移動
+  const handleBulkMove = useCallback(
+    async (categoryId: string | null) => {
+      const ids = Array.from(useUIStore.getState().selectedLinkIds);
+      if (ids.length === 0) return;
+      try {
+        await commands.moveLinksToCategory(ids, categoryId);
+        useUIStore.getState().clearSelection();
+        loadLinks();
+        loadCategories();
+      } catch (err) {
+        console.error('Failed to move links:', err);
+      }
+    },
+    [loadLinks, loadCategories],
+  );
+
+  // 一括削除
+  const handleBulkDelete = useCallback(async () => {
+    const ids = Array.from(useUIStore.getState().selectedLinkIds);
+    if (ids.length === 0) return;
+    try {
+      await commands.bulkDeleteLinks(ids);
+      useUIStore.getState().clearSelection();
+      loadLinks();
+      loadCategories();
+    } catch (err) {
+      console.error('Failed to delete links:', err);
+    }
+  }, [loadLinks, loadCategories]);
 
   // カテゴリ追加
   const handleAddCategory = useCallback(() => {
@@ -346,12 +401,22 @@ function App() {
           className="flex flex-1 flex-col overflow-hidden"
           style={{ background: 'var(--bg-base)' }}
         >
-          <Toolbar
-            onAddLink={() => setAddDialogOpen(true)}
-            onImport={() => setImportDialogOpen(true)}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-          />
+          {selectedLinkIds.size > 0 ? (
+            <BulkActionBar
+              selectedCount={selectedLinkIds.size}
+              categories={categories}
+              onMove={handleBulkMove}
+              onDelete={handleBulkDelete}
+              onClear={clearSelection}
+            />
+          ) : (
+            <Toolbar
+              onAddLink={() => setAddDialogOpen(true)}
+              onImport={() => setImportDialogOpen(true)}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+            />
+          )}
           <LinkList
             links={links}
             onOpen={handleOpenLink}
