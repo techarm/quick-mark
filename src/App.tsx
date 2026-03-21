@@ -27,10 +27,16 @@ function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [searchPaletteOpen, setSearchPaletteOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
-  const { activeFilter, activeCategoryId, selectedLinkId, detailPanelOpen } = useUIStore();
+  const {
+    activeFilter,
+    activeCategoryId,
+    selectedLinkId,
+    detailPanelOpen,
+    searchPaletteOpen,
+    setSearchPaletteOpen,
+  } = useUIStore();
 
   // データの読み込み
   const loadLinks = useCallback(async () => {
@@ -73,23 +79,76 @@ function App() {
     commands.cleanupExpiredLinks().catch(console.error);
   }, []);
 
-  // グローバルキーボードショートカット（アプリ内）
+  // OS-level グローバルショートカット（Cmd+Shift+Space）
+  useEffect(() => {
+    let registered = false;
+
+    async function setupGlobalShortcut() {
+      try {
+        const { register, unregister } = await import('@tauri-apps/plugin-global-shortcut');
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+
+        // 既存のショートカットがあれば解除
+        try {
+          await unregister('CommandOrControl+Shift+Space');
+        } catch {
+          // 未登録の場合は無視
+        }
+
+        await register('CommandOrControl+Shift+Space', async () => {
+          const win = getCurrentWindow();
+          const store = useUIStore.getState();
+
+          try {
+            const visible = await win.isVisible();
+
+            if (visible && store.searchPaletteOpen) {
+              // パレット表示中 → 閉じてウィンドウを隠す
+              store.setSearchPaletteOpen(false);
+              await win.hide();
+            } else {
+              // ウィンドウを表示してパレットを開く
+              await win.show();
+              await win.setFocus();
+              store.setSearchPaletteOpen(true);
+            }
+          } catch (err) {
+            console.error('Global shortcut handler error:', err);
+          }
+        });
+
+        registered = true;
+      } catch (err) {
+        // ブラウザ環境では登録できないので無視
+        console.warn('Global shortcut not available:', err);
+      }
+    }
+
+    setupGlobalShortcut();
+
+    return () => {
+      if (registered) {
+        import('@tauri-apps/plugin-global-shortcut')
+          .then(({ unregister }) => unregister('CommandOrControl+Shift+Space'))
+          .catch(() => {});
+      }
+    };
+  }, []);
+
+  // アプリ内キーボードショートカット
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd+Shift+L: 検索パレット
-      if (e.metaKey && e.shiftKey && e.key === 'l') {
+      const store = useUIStore.getState();
+
+      // Cmd+K: 検索パレットトグル
+      if (e.metaKey && e.key === 'k') {
         e.preventDefault();
-        setSearchPaletteOpen((prev) => !prev);
+        store.setSearchPaletteOpen(!store.searchPaletteOpen);
       }
       // Cmd+Shift+A: リンク追加
       if (e.metaKey && e.shiftKey && e.key === 'a') {
         e.preventDefault();
         setAddDialogOpen(true);
-      }
-      // Cmd+K: 検索パレット (代替)
-      if (e.metaKey && e.key === 'k') {
-        e.preventDefault();
-        setSearchPaletteOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
