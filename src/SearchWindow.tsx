@@ -316,7 +316,7 @@ function SearchResultItem({ link, onSelect }: { link: Link; onSelect: () => void
             gap: 3,
             padding: '2px 8px',
             borderRadius: 99,
-            fontSize: 10,
+            fontSize: 11,
             background: 'rgba(245, 158, 11, 0.12)',
             color: 'var(--accent-warm)',
             flexShrink: 0,

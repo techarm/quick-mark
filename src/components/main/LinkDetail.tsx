@@ -167,7 +167,7 @@ export function LinkDetail({ link, onOpen, onEdit, onDelete, onTogglePin }: Link
               textAlign: 'left',
               wordBreak: 'break-all',
               fontFamily: 'var(--font-mono)',
-              fontSize: '0.8em',
+              fontSize: '0.85em',
               padding: 0,
             }}
           >

@@ -283,7 +283,7 @@ export function AddLinkDialog({
                       <button
                         type="button"
                         className="btn btn-secondary"
-                        style={{ height: 28, fontSize: 12, padding: '0 12px' }}
+                        style={{ height: 32, fontSize: 12, padding: '0 12px' }}
                         onClick={() => setDuplicateAction('update')}
                       >
                         既存を更新
@@ -292,7 +292,7 @@ export function AddLinkDialog({
                     <button
                       type="button"
                       className="btn btn-ghost"
-                      style={{ height: 28, fontSize: 12, padding: '0 12px' }}
+                      style={{ height: 32, fontSize: 12, padding: '0 12px' }}
                       onClick={() => setDuplicateAction('add')}
                     >
                       そのまま追加

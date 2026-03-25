@@ -288,7 +288,7 @@ function LinkRow({
         display: 'flex',
         alignItems: 'center',
         gap: 14,
-        height: 48,
+        height: 52,
         padding: '0 20px',
         cursor: 'pointer',
         borderBottom: '1px solid var(--border-subtle)',
@@ -365,7 +365,7 @@ function LinkRow({
             gap: 3,
             padding: '2px 8px',
             borderRadius: 99,
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: 500,
             background: expiryInfo.urgent ? 'rgba(255, 71, 87, 0.12)' : 'rgba(245, 158, 11, 0.12)',
             color: expiryInfo.urgent ? 'var(--accent-danger)' : 'var(--accent-warm)',
@@ -472,7 +472,7 @@ function LinkCard({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              lineHeight: 1.3,
+              lineHeight: 1.4,
             }}
           >
             {link.title || link.url}
@@ -511,7 +511,7 @@ function LinkCard({
                 gap: 3,
                 padding: '2px 7px',
                 borderRadius: 99,
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: 500,
                 background: 'rgba(226, 80, 80, 0.12)',
                 color: 'var(--accent-primary)',
@@ -529,7 +529,7 @@ function LinkCard({
                 gap: 3,
                 padding: '2px 7px',
                 borderRadius: 99,
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: 500,
                 background: expiryInfo.urgent
                   ? 'rgba(255, 71, 87, 0.12)'
@@ -544,7 +544,7 @@ function LinkCard({
           {link.visit_count > 0 && (
             <span
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 color: 'var(--text-tertiary)',
                 fontVariantNumeric: 'tabular-nums',
                 marginLeft: 'auto',

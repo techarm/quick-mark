@@ -33,7 +33,7 @@
   /* === テキスト === */
   --text-primary: rgba(252, 248, 248, 0.95);
   --text-secondary: rgba(210, 190, 190, 0.72);
-  --text-tertiary: rgba(170, 150, 150, 0.48);
+  --text-tertiary: rgba(170, 150, 150, 0.65);
   --text-on-accent: #ffffff;
 
   /* === ボーダー === */
@@ -99,9 +99,17 @@
 
   /* === テキスト === */
   --text-primary: rgba(30, 20, 20, 0.92);
-  --text-secondary: rgba(80, 60, 60, 0.72);
-  --text-tertiary: rgba(120, 100, 100, 0.5);
+  --text-secondary: rgba(80, 60, 60, 0.78);
+  --text-tertiary: rgba(100, 80, 80, 0.7);
   --text-on-accent: #ffffff;
+
+  /* === ライトモード専用アクセント（白背景でAA準拠） === */
+  --accent-primary: #cc4040;
+  --accent-primary-hover: #b83636;
+  --accent-gradient: linear-gradient(135deg, #cc4040, #b83060);
+  --accent-warm: #9e6500;
+  --accent-danger: #d43040;
+  --accent-success: #1a8a4a;
 
   /* === ボーダー === */
   --border-subtle: rgba(120, 80, 80, 0.1);

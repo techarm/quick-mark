@@ -296,7 +296,7 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
                               {isDup && (
                                 <span
                                   style={{
-                                    fontSize: 10,
+                                    fontSize: 11,
                                     color: 'var(--accent-warm)',
                                     flexShrink: 0,
                                   }}
