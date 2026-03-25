@@ -63,15 +63,16 @@ export function SearchWindow() {
     };
   }, [query, doSearch]);
 
-  // ウィンドウ表示時にフォーカスを復元
+  // ウィンドウ表示時にクエリをクリアしてフォーカスを復元
   useEffect(() => {
     const handleFocus = () => {
-      doSearch(query || '');
+      setQuery('');
+      doSearch('');
       setTimeout(() => inputRef.current?.focus(), 50);
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [query, doSearch]);
+  }, [doSearch]);
 
   // 結果件数に応じてウィンドウサイズを調整
   const listHeight = useMemo(() => {

@@ -274,9 +274,9 @@ pub fn search_links(
                  WHERE links_fts MATCH ?1
                  ORDER BY
                     (fts.rank * -1.0) * 0.5 +
-                    (CASE WHEN l.visit_count > 0 THEN l.visit_count * 0.03 ELSE 0 END) +
+                    (CASE WHEN l.visit_count > 0 THEN l.visit_count * 0.15 ELSE 0 END) +
                     (CASE WHEN l.last_visited_at IS NOT NULL
-                        THEN (julianday('now') - julianday(l.last_visited_at)) * -0.004
+                        THEN (julianday('now') - julianday(l.last_visited_at)) * -0.02
                         ELSE 0 END)
                  DESC
                  LIMIT 20",
