@@ -68,6 +68,7 @@ export function LinkDetail({ link, onOpen, onEdit, onDelete, onTogglePin }: Link
             setSelectedLinkId(null);
           }}
           className="dialog-close-btn"
+          aria-label="詳細パネルを閉じる"
         >
           <X size={14} />
         </button>
@@ -92,7 +93,7 @@ export function LinkDetail({ link, onOpen, onEdit, onDelete, onTogglePin }: Link
               width: 44,
               height: 44,
               borderRadius: 'var(--radius-lg)',
-              background: 'rgba(255, 255, 255, 0.9)',
+              background: 'var(--favicon-bg)',
               border: '1px solid var(--border-subtle)',
               flexShrink: 0,
             }}

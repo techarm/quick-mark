@@ -151,7 +151,7 @@ export function LinkList({ links, onOpen, onEdit, onDelete, onTogglePin }: LinkL
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 320px))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
           gap: 12,
           padding: 20,
           overflow: 'auto',
@@ -213,27 +213,8 @@ function LinkRowMenu({
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 26,
-            height: 26,
-            border: 'none',
-            borderRadius: 'var(--radius-sm)',
-            background: 'transparent',
-            color: 'var(--text-tertiary)',
-            cursor: 'pointer',
-            transition: 'all 150ms ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--bg-hover)';
-            e.currentTarget.style.color = 'var(--text-secondary)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = 'var(--text-tertiary)';
-          }}
+          aria-label="メニューを開く"
+          className="link-menu-btn"
         >
           <MoreHorizontal size={14} />
         </button>
@@ -325,7 +306,7 @@ function LinkRow({
           width: 28,
           height: 28,
           borderRadius: 'var(--radius-sm)',
-          background: 'rgba(255, 255, 255, 0.9)',
+          background: 'var(--favicon-bg)',
           flexShrink: 0,
         }}
       >
@@ -472,7 +453,7 @@ function LinkCard({
             width: 32,
             height: 32,
             borderRadius: 'var(--radius-sm)',
-            background: 'rgba(255, 255, 255, 0.9)',
+            background: 'var(--favicon-bg)',
             flexShrink: 0,
           }}
         >

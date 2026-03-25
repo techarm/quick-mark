@@ -122,10 +122,11 @@ export function CategoryDialog({
               style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
             >
               <div className="form-field">
-                <label className="form-label">
+                <label htmlFor="category-name" className="form-label">
                   名前<span className="required">*</span>
                 </label>
                 <input
+                  id="category-name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -136,8 +137,8 @@ export function CategoryDialog({
               </div>
 
               <div className="form-field">
-                <label className="form-label">カラー</label>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 4 }}>
+                <label className="form-label" id="category-color-label">カラー</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 4 }} role="group" aria-labelledby="category-color-label">
                   {PRESET_COLORS.map((c) => (
                     <button
                       key={c}
@@ -146,14 +147,17 @@ export function CategoryDialog({
                       style={{ background: c }}
                       onClick={() => setColor(c)}
                       title={c}
+                      aria-label={`カラー ${c}`}
+                      aria-pressed={color === c}
                     />
                   ))}
                 </div>
               </div>
 
               <div className="form-field">
-                <label className="form-label">検索キーワード</label>
+                <label htmlFor="category-alias" className="form-label">検索キーワード</label>
                 <input
+                  id="category-alias"
                   type="text"
                   value={searchAlias}
                   onChange={(e) => setSearchAlias(e.target.value)}
@@ -163,8 +167,9 @@ export function CategoryDialog({
               </div>
 
               <div className="form-field">
-                <label className="form-label">親カテゴリ</label>
+                <label htmlFor="category-parent" className="form-label">親カテゴリ</label>
                 <select
+                  id="category-parent"
                   value={parentId}
                   onChange={(e) => setParentId(e.target.value)}
                   className="input-field"

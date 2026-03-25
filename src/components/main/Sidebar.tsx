@@ -140,6 +140,7 @@ export function Sidebar({
               cursor: 'pointer',
             }}
             title="カテゴリを追加"
+            aria-label="カテゴリを追加"
           >
             <Plus size={13} strokeWidth={2} />
           </button>
@@ -179,7 +180,7 @@ export function Sidebar({
                 category={cat}
                 childCategories={getChildren(cat.id)}
                 allCategories={categories}
-                active={activeCategoryId === cat.id}
+                activeCategoryId={activeCategoryId}
                 onSelect={setActiveCategoryId}
                 onEdit={onEditCategory}
                 onDelete={onDeleteCategory}
@@ -230,7 +231,7 @@ function CategoryItem({
   category,
   childCategories,
   allCategories,
-  active,
+  activeCategoryId,
   onSelect,
   onEdit,
   onDelete,
@@ -239,12 +240,13 @@ function CategoryItem({
   category: Category;
   childCategories: Category[];
   allCategories: Category[];
-  active: boolean;
+  activeCategoryId: string | null;
   onSelect: (id: string) => void;
   onEdit?: (category: Category) => void;
   onDelete?: (category: Category) => void;
   depth: number;
 }) {
+  const active = activeCategoryId === category.id;
   const getChildren = (parentId: string) => allCategories.filter((c) => c.parent_id === parentId);
 
   return (
@@ -313,7 +315,7 @@ function CategoryItem({
               category={child}
               childCategories={getChildren(child.id)}
               allCategories={allCategories}
-              active={useUIStore.getState().activeCategoryId === child.id}
+              activeCategoryId={activeCategoryId}
               onSelect={onSelect}
               onEdit={onEdit}
               onDelete={onDelete}

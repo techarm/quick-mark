@@ -469,12 +469,14 @@ function App() {
   );
 
   // リンクカウントを計算
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const linkCounts = {
     all: links.length,
-    recent: links.length,
+    recent: links.filter((l) => new Date(l.created_at) >= sevenDaysAgo).length,
     temporary: links.filter((l) => l.is_temporary).length,
     expired: links.filter(
-      (l) => l.is_temporary && l.expires_at && new Date(l.expires_at) < new Date(),
+      (l) => l.is_temporary && l.expires_at && new Date(l.expires_at) < now,
     ).length,
     pinned: links.filter((l) => l.is_pinned).length,
   };

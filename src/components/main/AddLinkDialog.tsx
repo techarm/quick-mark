@@ -184,7 +184,7 @@ export function AddLinkDialog({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'rgba(15, 11, 11, 0.6)',
+                    background: 'var(--overlay-backdrop)',
                     borderRadius: 'var(--radius-md)',
                     zIndex: 10,
                     gap: 10,
@@ -205,7 +205,7 @@ export function AddLinkDialog({
 
               {/* URL */}
               <div className="form-field">
-                <label className="form-label">
+                <label htmlFor="add-link-url" className="form-label">
                   URL<span className="required">*</span>
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -218,7 +218,7 @@ export function AddLinkDialog({
                         width: 28,
                         height: 28,
                         borderRadius: 'var(--radius-sm)',
-                        background: 'rgba(255, 255, 255, 0.9)',
+                        background: 'var(--favicon-bg)',
                         flexShrink: 0,
                       }}
                     >
@@ -234,6 +234,7 @@ export function AddLinkDialog({
                     </div>
                   )}
                   <input
+                    id="add-link-url"
                     type="url"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
@@ -339,8 +340,9 @@ export function AddLinkDialog({
 
               {/* タイトル */}
               <div className="form-field">
-                <label className="form-label">タイトル</label>
+                <label htmlFor="add-link-title" className="form-label">タイトル</label>
                 <input
+                  id="add-link-title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -351,8 +353,9 @@ export function AddLinkDialog({
 
               {/* 説明 */}
               <div className="form-field">
-                <label className="form-label">説明</label>
+                <label htmlFor="add-link-desc" className="form-label">説明</label>
                 <textarea
+                  id="add-link-desc"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="メモや説明（任意）"
@@ -369,8 +372,9 @@ export function AddLinkDialog({
 
               {/* カテゴリ */}
               <div className="form-field">
-                <label className="form-label">カテゴリ</label>
+                <label htmlFor="add-link-category" className="form-label">カテゴリ</label>
                 <select
+                  id="add-link-category"
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
                   className="input-field"
@@ -440,11 +444,6 @@ export function AddLinkDialog({
             </div>
           </form>
 
-          <style>{`
-            @keyframes spin {
-              to { transform: rotate(360deg); }
-            }
-          `}</style>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

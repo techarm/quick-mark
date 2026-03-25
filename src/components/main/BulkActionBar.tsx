@@ -1,5 +1,5 @@
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { FolderOpen, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
 import type { Category } from '../../lib/types';
 
 interface BulkActionBarProps {
@@ -17,8 +17,6 @@ export function BulkActionBar({
   onDelete,
   onClear,
 }: BulkActionBarProps) {
-  const [showMoveMenu, setShowMoveMenu] = useState(false);
-
   return (
     <div
       style={{
@@ -45,68 +43,44 @@ export function BulkActionBar({
       <div style={{ flex: 1 }} />
 
       {/* 移動ボタン */}
-      <div style={{ position: 'relative' }}>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ height: 32, padding: '0 12px', gap: 6, fontSize: 12 }}
-          onClick={() => setShowMoveMenu(!showMoveMenu)}
-        >
-          <FolderOpen size={14} />
-          移動
-        </button>
-
-        {showMoveMenu && (
-          <>
-            <div
-              style={{ position: 'fixed', inset: 0, zIndex: 99 }}
-              onClick={() => setShowMoveMenu(false)}
-              onKeyDown={() => {}}
-              role="presentation"
-            />
-            <div
-              className="dropdown-menu-content"
-              style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                marginTop: 4,
-                zIndex: 100,
-                maxHeight: 300,
-                overflow: 'auto',
-              }}
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ height: 32, padding: '0 12px', gap: 6, fontSize: 12 }}
+          >
+            <FolderOpen size={14} />
+            移動
+          </button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            className="dropdown-menu-content"
+            sideOffset={4}
+            align="end"
+            style={{ maxHeight: 300, overflow: 'auto' }}
+          >
+            <DropdownMenu.Item
+              className="dropdown-menu-item"
+              onSelect={() => onMove(null)}
             >
-              <button
-                type="button"
+              未分類に移動
+            </DropdownMenu.Item>
+            <DropdownMenu.Separator className="dropdown-menu-separator" />
+            {categories.map((cat) => (
+              <DropdownMenu.Item
+                key={cat.id}
                 className="dropdown-menu-item"
-                style={{ width: '100%' }}
-                onClick={() => {
-                  onMove(null);
-                  setShowMoveMenu(false);
-                }}
+                onSelect={() => onMove(cat.id)}
               >
-                未分類に移動
-              </button>
-              <div className="dropdown-menu-separator" />
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  className="dropdown-menu-item"
-                  style={{ width: '100%' }}
-                  onClick={() => {
-                    onMove(cat.id);
-                    setShowMoveMenu(false);
-                  }}
-                >
-                  <FolderOpen size={14} style={{ color: cat.color, opacity: 0.7 }} />
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+                <FolderOpen size={14} style={{ color: cat.color, opacity: 0.7 }} />
+                {cat.name}
+              </DropdownMenu.Item>
+            ))}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
 
       {/* 削除ボタン */}
       <button
@@ -132,6 +106,7 @@ export function BulkActionBar({
         style={{ height: 32, padding: '0 8px' }}
         onClick={onClear}
         title="選択解除"
+        aria-label="選択解除"
       >
         <X size={15} />
       </button>

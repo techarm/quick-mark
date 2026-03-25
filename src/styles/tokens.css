@@ -58,12 +58,22 @@
   --glass-inset: rgba(255, 255, 255, 0.04);
   --card-inset: rgba(255, 200, 200, 0.04);
   --danger-hover-bg: rgba(255, 71, 87, 0.1);
+  --favicon-bg: rgba(255, 255, 255, 0.9);
 
   /* === 角丸 === */
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
+
+  /* === z-index スケール === */
+  --z-base: 1;
+  --z-sidebar: 10;
+  --z-toolbar: 20;
+  --z-overlay: 40;
+  --z-dialog: 50;
+  --z-dropdown: 60;
+  --z-tooltip: 70;
 
   /* === レイアウト === */
   --sidebar-width: 240px;
@@ -115,4 +125,5 @@
   --glass-inset: rgba(255, 255, 255, 0.5);
   --card-inset: rgba(255, 255, 255, 0.6);
   --danger-hover-bg: rgba(255, 71, 87, 0.08);
+  --favicon-bg: rgba(0, 0, 0, 0.05);
 }

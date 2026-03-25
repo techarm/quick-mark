@@ -238,11 +238,6 @@ export function SearchWindow() {
         </div>
       </Command>
 
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }
@@ -271,7 +266,7 @@ function SearchResultItem({ link, onSelect }: { link: Link; onSelect: () => void
           width: 26,
           height: 26,
           borderRadius: 6,
-          background: 'rgba(255, 255, 255, 0.9)',
+          background: 'var(--favicon-bg)',
           flexShrink: 0,
         }}
       >

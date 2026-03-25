@@ -110,10 +110,11 @@ export function EditLinkDialog({
               style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
             >
               <div className="form-field">
-                <label className="form-label">
+                <label htmlFor="edit-link-url" className="form-label">
                   URL<span className="required">*</span>
                 </label>
                 <input
+                  id="edit-link-url"
                   type="url"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
@@ -124,8 +125,9 @@ export function EditLinkDialog({
               </div>
 
               <div className="form-field">
-                <label className="form-label">タイトル</label>
+                <label htmlFor="edit-link-title" className="form-label">タイトル</label>
                 <input
+                  id="edit-link-title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -135,8 +137,9 @@ export function EditLinkDialog({
               </div>
 
               <div className="form-field">
-                <label className="form-label">説明</label>
+                <label htmlFor="edit-link-desc" className="form-label">説明</label>
                 <textarea
+                  id="edit-link-desc"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="メモや説明（任意）"
@@ -152,8 +155,9 @@ export function EditLinkDialog({
               </div>
 
               <div className="form-field">
-                <label className="form-label">カテゴリ</label>
+                <label htmlFor="edit-link-category" className="form-label">カテゴリ</label>
                 <select
+                  id="edit-link-category"
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
                   className="input-field"

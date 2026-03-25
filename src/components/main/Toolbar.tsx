@@ -93,10 +93,10 @@ export function Toolbar({
           border: '1px solid var(--border-subtle)',
         }}
       >
-        <ViewToggle active={viewMode === 'list'} onClick={() => setViewMode('list')}>
+        <ViewToggle active={viewMode === 'list'} onClick={() => setViewMode('list')} label="リスト表示">
           <List size={15} />
         </ViewToggle>
-        <ViewToggle active={viewMode === 'card'} onClick={() => setViewMode('card')}>
+        <ViewToggle active={viewMode === 'card'} onClick={() => setViewMode('card')} label="カード表示">
           <LayoutGrid size={15} />
         </ViewToggle>
       </div>
@@ -113,6 +113,7 @@ export function Toolbar({
             flexShrink: 0,
           }}
           title="インポート"
+          aria-label="インポート"
         >
           <Upload size={15} />
         </button>
@@ -130,6 +131,7 @@ export function Toolbar({
             flexShrink: 0,
           }}
           title="エクスポート（バックアップ）"
+          aria-label="エクスポート"
         >
           <Download size={15} />
         </button>
@@ -157,16 +159,20 @@ export function Toolbar({
 function ViewToggle({
   active,
   onClick,
+  label,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  label: string;
   children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-label={label}
+      aria-pressed={active}
       className="flex items-center justify-center rounded-md transition-all duration-150"
       style={{
         width: '28px',
