@@ -63,6 +63,14 @@ export async function refreshFavicons(): Promise<number> {
   return invoke('refresh_favicons');
 }
 
+export async function getLinksWithoutFavicon(): Promise<[string, string][]> {
+  return invoke('get_links_without_favicon');
+}
+
+export async function refreshSingleFavicon(id: string, faviconUrl: string): Promise<void> {
+  return invoke('refresh_single_favicon', { id, faviconUrl });
+}
+
 export async function moveLinksToCategory(
   linkIds: string[],
   categoryId: string | null,
@@ -127,4 +135,28 @@ export async function parseJsonLinks(content: string): Promise<ImportItem[]> {
 
 export async function importBookmarks(items: ImportItem[]): Promise<ImportResult> {
   return invoke('import_bookmarks', { items });
+}
+
+// === エクスポート ===
+
+export async function exportData(): Promise<string> {
+  return invoke('export_data');
+}
+
+// === 重複チェック ===
+
+export interface DuplicateInfo {
+  id: string;
+  url: string;
+  title: string;
+  category_id: string | null;
+  category_name: string | null;
+}
+
+export async function checkDuplicateUrl(url: string): Promise<DuplicateInfo | null> {
+  return invoke('check_duplicate_url', { url });
+}
+
+export async function checkDuplicateUrls(urls: string[]): Promise<string[]> {
+  return invoke('check_duplicate_urls', { urls });
 }

@@ -94,20 +94,6 @@ export function SearchWindow() {
     })();
   }, [totalHeight]);
 
-  // ウィンドウがフォーカスを失ったら非表示にする
-  useEffect(() => {
-    const handleBlur = () => {
-      // 少し遅延させてフォーカス移動先を確認（ウィンドウ内の要素への移動は無視）
-      setTimeout(async () => {
-        if (!document.hasFocus()) {
-          await hideWindow();
-        }
-      }, 100);
-    };
-    window.addEventListener('blur', handleBlur);
-    return () => window.removeEventListener('blur', handleBlur);
-  }, []);
-
   // リンクを開く
   const handleOpenLink = useCallback(async (link: Link) => {
     try {
@@ -264,8 +250,6 @@ export function SearchWindow() {
 }
 
 function SearchResultItem({ link, onSelect }: { link: Link; onSelect: () => void }) {
-  const domain = getDomain(link.url);
-
   return (
     <Command.Item
       value={link.id}
@@ -286,9 +270,9 @@ function SearchResultItem({ link, onSelect }: { link: Link; onSelect: () => void
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: 32,
-          height: 32,
-          borderRadius: 'var(--radius-md)',
+          width: 26,
+          height: 26,
+          borderRadius: 6,
           background: 'rgba(255, 255, 255, 0.9)',
           flexShrink: 0,
         }}
@@ -327,7 +311,7 @@ function SearchResultItem({ link, onSelect }: { link: Link; onSelect: () => void
             whiteSpace: 'nowrap',
           }}
         >
-          {domain}
+          {link.url}
         </span>
       </div>
 
@@ -364,12 +348,4 @@ function SearchResultItem({ link, onSelect }: { link: Link; onSelect: () => void
       )}
     </Command.Item>
   );
-}
-
-function getDomain(url: string): string {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
 }

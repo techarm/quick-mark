@@ -1,14 +1,21 @@
-import { LayoutGrid, List, Plus, Search, Upload, X } from 'lucide-react';
+import { Download, LayoutGrid, List, Plus, Search, Upload, X } from 'lucide-react';
 import { useUIStore } from '../../stores/ui.store';
 
 interface ToolbarProps {
   onAddLink: () => void;
   onImport?: () => void;
+  onExport?: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
 }
 
-export function Toolbar({ onAddLink, onImport, searchQuery, onSearchChange }: ToolbarProps) {
+export function Toolbar({
+  onAddLink,
+  onImport,
+  onExport,
+  searchQuery,
+  onSearchChange,
+}: ToolbarProps) {
   const { viewMode, setViewMode } = useUIStore();
 
   return (
@@ -105,9 +112,26 @@ export function Toolbar({ onAddLink, onImport, searchQuery, onSearchChange }: To
             padding: '0 10px',
             flexShrink: 0,
           }}
-          title="ブックマークをインポート"
+          title="インポート"
         >
           <Upload size={15} />
+        </button>
+      )}
+
+      {/* エクスポートボタン */}
+      {onExport && (
+        <button
+          type="button"
+          onClick={onExport}
+          className="btn btn-ghost"
+          style={{
+            height: 36,
+            padding: '0 10px',
+            flexShrink: 0,
+          }}
+          title="エクスポート（バックアップ）"
+        >
+          <Download size={15} />
         </button>
       )}
 

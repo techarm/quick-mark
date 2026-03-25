@@ -1,17 +1,25 @@
 import * as Dialog from '@radix-ui/react-dialog';
-import { Link2, Loader2, X } from 'lucide-react';
+import { AlertTriangle, Link2, Loader2, X } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
+import type { DuplicateInfo } from '../../lib/commands';
 import * as commands from '../../lib/commands';
-import type { Category, CreateLinkInput } from '../../lib/types';
+import type { Category, CreateLinkInput, UpdateLinkInput } from '../../lib/types';
 
 interface AddLinkDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   categories: Category[];
   onSubmit: (input: CreateLinkInput) => void;
+  onUpdate?: (input: UpdateLinkInput) => void;
 }
 
-export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddLinkDialogProps) {
+export function AddLinkDialog({
+  open,
+  onOpenChange,
+  categories,
+  onSubmit,
+  onUpdate,
+}: AddLinkDialogProps) {
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -20,6 +28,8 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
   const [isTemporary, setIsTemporary] = useState(false);
   const [expiryDays, setExpiryDays] = useState(7);
   const [fetching, setFetching] = useState(false);
+  const [duplicate, setDuplicate] = useState<DuplicateInfo | null>(null);
+  const [duplicateAction, setDuplicateAction] = useState<'add' | 'update' | null>(null);
   const lastFetchedUrl = useRef('');
 
   const resetForm = useCallback(() => {
@@ -30,6 +40,8 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
     setCategoryId('');
     setIsTemporary(false);
     setExpiryDays(7);
+    setDuplicate(null);
+    setDuplicateAction(null);
     lastFetchedUrl.current = '';
   }, []);
 
@@ -41,10 +53,13 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
 
     lastFetchedUrl.current = trimmed;
     setFetching(true);
+    setDuplicate(null);
+    setDuplicateAction(null);
 
     // requestAnimationFrameでローディング表示を先にレンダリングしてから取得開始
     requestAnimationFrame(() => {
-      commands
+      // URL情報取得と重複チェックを並行実行
+      const fetchPromise = commands
         .fetchUrlInfo(trimmed)
         .then((info) => {
           if (info.title && !title.trim()) setTitle(info.title);
@@ -59,8 +74,16 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
           } catch {
             // URL解析失敗
           }
+        });
+
+      const dupPromise = commands
+        .checkDuplicateUrl(trimmed)
+        .then((info) => {
+          setDuplicate(info);
         })
-        .finally(() => setFetching(false));
+        .catch(() => {});
+
+      Promise.all([fetchPromise, dupPromise]).finally(() => setFetching(false));
     });
   }, [url, title, description]);
 
@@ -72,15 +95,29 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
       ? new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString()
       : undefined;
 
-    onSubmit({
-      url: url.trim(),
-      title: title.trim() || url.trim(),
-      description: description.trim() || undefined,
-      favicon_url: faviconUrl || undefined,
-      category_id: categoryId || undefined,
-      is_temporary: isTemporary,
-      expires_at: expiresAt,
-    });
+    // 「既存を更新」を選択した場合
+    if (duplicateAction === 'update' && duplicate && onUpdate) {
+      onUpdate({
+        id: duplicate.id,
+        url: url.trim(),
+        title: title.trim() || url.trim(),
+        description: description.trim() || undefined,
+        favicon_url: faviconUrl || undefined,
+        category_id: categoryId || undefined,
+        is_temporary: isTemporary,
+        expires_at: expiresAt,
+      });
+    } else {
+      onSubmit({
+        url: url.trim(),
+        title: title.trim() || url.trim(),
+        description: description.trim() || undefined,
+        favicon_url: faviconUrl || undefined,
+        category_id: categoryId || undefined,
+        is_temporary: isTemporary,
+        expires_at: expiresAt,
+      });
+    }
 
     resetForm();
     onOpenChange(false);
@@ -203,6 +240,97 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
                 </div>
               </div>
 
+              {/* 重複警告 */}
+              {duplicate && !duplicateAction && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                    padding: '12px 14px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'rgba(245, 158, 11, 0.08)',
+                    border: '1px solid rgba(245, 158, 11, 0.2)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <AlertTriangle
+                      size={15}
+                      style={{ color: 'var(--accent-warm)', flexShrink: 0 }}
+                    />
+                    <span style={{ fontSize: 13, color: 'var(--accent-warm)', fontWeight: 500 }}>
+                      このURLは既に登録されています
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', paddingLeft: 23 }}>
+                    「{duplicate.title}」
+                    {duplicate.category_name && (
+                      <span style={{ color: 'var(--text-tertiary)' }}>
+                        {' '}
+                        / {duplicate.category_name}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, paddingLeft: 23 }}>
+                    {onUpdate && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ height: 28, fontSize: 12, padding: '0 12px' }}
+                        onClick={() => setDuplicateAction('update')}
+                      >
+                        既存を更新
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ height: 28, fontSize: 12, padding: '0 12px' }}
+                      onClick={() => setDuplicateAction('add')}
+                    >
+                      そのまま追加
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {duplicateAction && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    background:
+                      duplicateAction === 'update'
+                        ? 'rgba(46, 213, 115, 0.08)'
+                        : 'rgba(245, 158, 11, 0.06)',
+                    fontSize: 12,
+                    color:
+                      duplicateAction === 'update' ? 'var(--accent-success)' : 'var(--accent-warm)',
+                  }}
+                >
+                  {duplicateAction === 'update'
+                    ? '既存リンクを更新します'
+                    : '重複を無視して追加します'}
+                  <button
+                    type="button"
+                    style={{
+                      marginLeft: 'auto',
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-tertiary)',
+                      cursor: 'pointer',
+                      fontSize: 11,
+                    }}
+                    onClick={() => setDuplicateAction(null)}
+                  >
+                    変更
+                  </button>
+                </div>
+              )}
+
               {/* タイトル */}
               <div className="form-field">
                 <label className="form-label">タイトル</label>
@@ -296,8 +424,12 @@ export function AddLinkDialog({ open, onOpenChange, categories, onSubmit }: AddL
                   キャンセル
                 </button>
               </Dialog.Close>
-              <button type="submit" className="btn btn-primary" disabled={fetching}>
-                追加する
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={fetching || (!!duplicate && !duplicateAction)}
+              >
+                {duplicateAction === 'update' ? '更新する' : '追加する'}
               </button>
             </div>
           </form>

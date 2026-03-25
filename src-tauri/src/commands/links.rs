@@ -363,7 +363,47 @@ pub fn cleanup_expired_links(
     Ok(deleted as i64)
 }
 
-/// favicon_urlが空のリンクにGoogle Favicon URLを一括設定
+/// favicon_urlが空のリンクIDリストを取得
+#[tauri::command]
+pub fn get_links_without_favicon(
+    db: State<'_, Mutex<AppDb>>,
+) -> Result<Vec<(String, String)>, String> {
+    let db = db.lock().map_err(|e| e.to_string())?;
+    let conn = &db.conn;
+
+    let mut stmt = conn
+        .prepare("SELECT id, url FROM links WHERE favicon_url IS NULL OR favicon_url = ''")
+        .map_err(|e| e.to_string())?;
+
+    let links = stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(links)
+}
+
+/// 1件のリンクのfaviconを取得して更新
+#[tauri::command]
+pub fn refresh_single_favicon(
+    db: State<'_, Mutex<AppDb>>,
+    id: String,
+    favicon_url: String,
+) -> Result<(), String> {
+    let db = db.lock().map_err(|e| e.to_string())?;
+    let conn = &db.conn;
+
+    conn.execute(
+        "UPDATE links SET favicon_url = ?1 WHERE id = ?2",
+        params![favicon_url, id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// 後方互換: 簡易版（Google Favicon APIのみ）
 #[tauri::command]
 pub fn refresh_favicons(
     db: State<'_, Mutex<AppDb>>,
@@ -445,4 +485,75 @@ pub fn bulk_delete_links(
     }
 
     Ok(deleted)
+}
+
+// === 重複URL検知 ===
+
+#[derive(Debug, Serialize)]
+pub struct DuplicateInfo {
+    pub id: String,
+    pub url: String,
+    pub title: String,
+    pub category_id: Option<String>,
+    pub category_name: Option<String>,
+}
+
+/// 単一URLの重複チェック
+#[tauri::command]
+pub fn check_duplicate_url(
+    db: State<'_, Mutex<AppDb>>,
+    url: String,
+) -> Result<Option<DuplicateInfo>, String> {
+    let db = db.lock().map_err(|e| e.to_string())?;
+    let conn = &db.conn;
+
+    let result = conn.query_row(
+        "SELECT l.id, l.url, l.title, l.category_id, c.name
+         FROM links l
+         LEFT JOIN categories c ON l.category_id = c.id
+         WHERE l.url = ?1
+         LIMIT 1",
+        params![url],
+        |row| {
+            Ok(DuplicateInfo {
+                id: row.get(0)?,
+                url: row.get(1)?,
+                title: row.get(2)?,
+                category_id: row.get(3)?,
+                category_name: row.get(4)?,
+            })
+        },
+    );
+
+    match result {
+        Ok(info) => Ok(Some(info)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// 複数URLの一括重複チェック（インポート用）
+#[tauri::command]
+pub fn check_duplicate_urls(
+    db: State<'_, Mutex<AppDb>>,
+    urls: Vec<String>,
+) -> Result<Vec<String>, String> {
+    let db = db.lock().map_err(|e| e.to_string())?;
+    let conn = &db.conn;
+
+    let mut duplicates = Vec::new();
+    let mut stmt = conn
+        .prepare("SELECT 1 FROM links WHERE url = ?1 LIMIT 1")
+        .map_err(|e| e.to_string())?;
+
+    for url in &urls {
+        let exists: bool = stmt
+            .query_row(params![url], |_| Ok(true))
+            .unwrap_or(false);
+        if exists {
+            duplicates.push(url.clone());
+        }
+    }
+
+    Ok(duplicates)
 }

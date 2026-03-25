@@ -22,7 +22,11 @@
     "global-shortcut:allow-unregister",
     "shell:allow-open",
     "dialog:allow-open",
+    "dialog:allow-save",
+    "dialog:allow-ask",
+    "dialog:allow-confirm",
     "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
     {
       "identifier": "fs:scope",
       "allow": [{ "path": "**" }]

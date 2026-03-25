@@ -1,7 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
-import { CheckCircle, FileUp, Loader2, Upload, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, FileUp, Loader2, Upload, X } from 'lucide-react';
 import { useState } from 'react';
 import type { ImportItem, ImportResult } from '../lib/commands';
 import * as commands from '../lib/commands';
@@ -19,6 +19,7 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
   const [items, setItems] = useState<ImportItem[]>([]);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateUrls, setDuplicateUrls] = useState<Set<string>>(new Set());
 
   const handleSelectFile = async () => {
     try {
@@ -46,6 +47,16 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
         : await commands.parseBookmarksHtml(content);
 
       setItems(parsed);
+
+      // 重複チェック
+      try {
+        const urls = parsed.map((item) => item.url);
+        const dups = await commands.checkDuplicateUrls(urls);
+        setDuplicateUrls(new Set(dups));
+      } catch {
+        setDuplicateUrls(new Set());
+      }
+
       setState('preview');
     } catch (err) {
       setError(`ファイルの解析に失敗しました: ${err}`);
@@ -71,6 +82,7 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
     setItems([]);
     setResult(null);
     setError(null);
+    setDuplicateUrls(new Set());
     onOpenChange(false);
   };
 
@@ -205,10 +217,29 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
 
             {state === 'preview' && (
               <div>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>
                   <strong style={{ color: 'var(--text-primary)' }}>{items.length}件</strong>
                   のリンクが見つかりました
                 </p>
+                {duplicateUrls.size > 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 12px',
+                      marginBottom: 16,
+                      borderRadius: 'var(--radius-md)',
+                      background: 'rgba(245, 158, 11, 0.08)',
+                      border: '1px solid rgba(245, 158, 11, 0.15)',
+                      fontSize: 12,
+                      color: 'var(--accent-warm)',
+                    }}
+                  >
+                    <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+                    {duplicateUrls.size}件は既に登録済みです（スキップされます）
+                  </div>
+                )}
                 <div
                   style={{
                     maxHeight: 280,
@@ -233,23 +264,49 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
                         {folder}（{folderItems.length}件）
                       </p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {folderItems.slice(0, 5).map((item) => (
-                          <div
-                            key={item.url}
-                            style={{
-                              padding: '6px 10px',
-                              borderRadius: 'var(--radius-sm)',
-                              background: 'var(--bg-elevated)',
-                              fontSize: 12,
-                              color: 'var(--text-secondary)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {item.title}
-                          </div>
-                        ))}
+                        {folderItems.slice(0, 5).map((item) => {
+                          const isDup = duplicateUrls.has(item.url);
+                          return (
+                            <div
+                              key={item.url}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                padding: '6px 10px',
+                                borderRadius: 'var(--radius-sm)',
+                                background: isDup
+                                  ? 'rgba(245, 158, 11, 0.06)'
+                                  : 'var(--bg-elevated)',
+                                fontSize: 12,
+                                color: isDup ? 'var(--text-tertiary)' : 'var(--text-secondary)',
+                                textDecoration: isDup ? 'line-through' : 'none',
+                              }}
+                            >
+                              <span
+                                style={{
+                                  flex: 1,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {item.title}
+                              </span>
+                              {isDup && (
+                                <span
+                                  style={{
+                                    fontSize: 10,
+                                    color: 'var(--accent-warm)',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  重複
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
                         {folderItems.length > 5 && (
                           <p
                             style={{ paddingLeft: 10, fontSize: 11, color: 'var(--text-tertiary)' }}

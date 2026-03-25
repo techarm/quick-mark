@@ -10,6 +10,7 @@ async function safeOpenUrl(url: string) {
 }
 
 import { useCallback, useEffect, useState } from 'react';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { ImportDialog } from './components/ImportDialog';
 import { AddLinkDialog } from './components/main/AddLinkDialog';
 import { BulkActionBar } from './components/main/BulkActionBar';
@@ -64,6 +65,15 @@ function App() {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
+  // 確認ダイアログ
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    onConfirm: () => void;
+  }>({ open: false, title: '', message: '', onConfirm: () => {} });
+
   const {
     activeFilter,
     activeCategoryId,
@@ -83,7 +93,7 @@ function App() {
         const results = await commands.getLinks(activeCategoryId);
         setLinks(results);
       } else {
-        const filter = activeFilter === 'all' ? undefined : activeFilter;
+        const filter = activeFilter === 'all' ? undefined : (activeFilter ?? undefined);
         const results = await commands.getLinks(undefined, filter);
         setLinks(results);
       }
@@ -110,16 +120,54 @@ function App() {
     loadCategories();
   }, [loadCategories]);
 
+  // バックグラウンドでfaviconを取得（同一ドメインはキャッシュ活用）
+  const refreshFaviconsBackground = useCallback(async () => {
+    try {
+      const missingLinks = await commands.getLinksWithoutFavicon();
+      if (missingLinks.length === 0) return;
+
+      const BATCH_SIZE = 5;
+      let processed = 0;
+      const domainCache = new Map<string, string>();
+
+      for (const [id, url] of missingLinks) {
+        try {
+          let faviconUrl: string;
+          const domain = new URL(url).hostname;
+
+          // 同一ドメインのキャッシュがあればHTTPリクエスト不要
+          if (domainCache.has(domain)) {
+            faviconUrl = domainCache.get(domain)!;
+          } else {
+            const info = await commands.fetchUrlInfo(url);
+            faviconUrl =
+              info.favicon_url || `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+            domainCache.set(domain, faviconUrl);
+          }
+
+          await commands.refreshSingleFavicon(id, faviconUrl);
+        } catch {
+          // 個別失敗は無視して次へ
+        }
+        processed++;
+        if (processed % BATCH_SIZE === 0) {
+          loadLinks();
+          await new Promise((r) => setTimeout(r, 100));
+        }
+      }
+      if (processed % BATCH_SIZE !== 0) {
+        loadLinks();
+      }
+    } catch (err) {
+      console.error('Background favicon refresh failed:', err);
+    }
+  }, [loadLinks]);
+
   // 起動時に期限切れリンクをクリーンアップ + favicon更新
   useEffect(() => {
     commands.cleanupExpiredLinks().catch(console.error);
-    commands
-      .refreshFavicons()
-      .then((count) => {
-        if (count > 0) loadLinks();
-      })
-      .catch(console.error);
-  }, [loadLinks]);
+    refreshFaviconsBackground();
+  }, [refreshFaviconsBackground]);
 
   // OS-level グローバルショートカット（Cmd+Shift+Space）
   // OS-level グローバルショートカット（Cmd+Shift+Space）→ 独立検索ウィンドウ
@@ -220,6 +268,31 @@ function App() {
     [loadLinks, loadCategories],
   );
 
+  // データエクスポート
+  const handleExport = useCallback(async () => {
+    try {
+      const jsonStr = await commands.exportData();
+      const { save } = await import('@tauri-apps/plugin-dialog');
+      const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const defaultName = `quickmark-backup-${dateStr}.json`;
+
+      const filePath = await save({
+        title: 'エクスポート先を選択',
+        defaultPath: defaultName,
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      });
+
+      if (filePath) {
+        await writeTextFile(filePath, jsonStr);
+      }
+    } catch (err) {
+      console.error('Failed to export:', err);
+    }
+  }, []);
+
   // リンクを編集
   const handleEditLink = useCallback((link: Link) => {
     setEditingLink(link);
@@ -240,21 +313,28 @@ function App() {
     [loadLinks, loadCategories],
   );
 
-  // リンクを削除
+  // リンクを削除（確認付き）
   const handleDeleteLink = useCallback(
     async (link: Link) => {
-      try {
-        await commands.deleteLink(link.id);
-        const store = useUIStore.getState();
-        if (store.selectedLinkId === link.id) {
-          store.setSelectedLinkId(null);
-          store.setDetailPanelOpen(false);
-        }
-        loadLinks();
-        loadCategories();
-      } catch (err) {
-        console.error('Failed to delete link:', err);
-      }
+      setConfirmDialog({
+        open: true,
+        title: 'リンクの削除',
+        message: `「${link.title || link.url}」を削除しますか？`,
+        onConfirm: async () => {
+          try {
+            await commands.deleteLink(link.id);
+            const store = useUIStore.getState();
+            if (store.selectedLinkId === link.id) {
+              store.setSelectedLinkId(null);
+              store.setDetailPanelOpen(false);
+            }
+            loadLinks();
+            loadCategories();
+          } catch (err) {
+            console.error('Failed to delete link:', err);
+          }
+        },
+      });
     },
     [loadLinks, loadCategories],
   );
@@ -292,18 +372,25 @@ function App() {
     [loadLinks, loadCategories],
   );
 
-  // 一括削除
-  const handleBulkDelete = useCallback(async () => {
+  // 一括削除（確認付き）
+  const handleBulkDelete = useCallback(() => {
     const ids = Array.from(useUIStore.getState().selectedLinkIds);
     if (ids.length === 0) return;
-    try {
-      await commands.bulkDeleteLinks(ids);
-      useUIStore.getState().clearSelection();
-      loadLinks();
-      loadCategories();
-    } catch (err) {
-      console.error('Failed to delete links:', err);
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'リンクの一括削除',
+      message: `${ids.length}件のリンクを削除しますか？`,
+      onConfirm: async () => {
+        try {
+          await commands.bulkDeleteLinks(ids);
+          useUIStore.getState().clearSelection();
+          loadLinks();
+          loadCategories();
+        } catch (err) {
+          console.error('Failed to delete links:', err);
+        }
+      },
+    });
   }, [loadLinks, loadCategories]);
 
   // カテゴリ追加
@@ -318,20 +405,27 @@ function App() {
     setCategoryDialogOpen(true);
   }, []);
 
-  // カテゴリ削除
+  // カテゴリ削除（確認付き）
   const handleDeleteCategory = useCallback(
-    async (category: Category) => {
-      try {
-        await commands.deleteCategory(category.id);
-        const store = useUIStore.getState();
-        if (store.activeCategoryId === category.id) {
-          store.setActiveFilter('all');
-        }
-        loadCategories();
-        loadLinks();
-      } catch (err) {
-        console.error('Failed to delete category:', err);
-      }
+    (category: Category) => {
+      setConfirmDialog({
+        open: true,
+        title: 'カテゴリの削除',
+        message: `カテゴリ「${category.name}」を削除しますか？\nカテゴリ内のリンクは未分類に移動されます。`,
+        onConfirm: async () => {
+          try {
+            await commands.deleteCategory(category.id);
+            const store = useUIStore.getState();
+            if (store.activeCategoryId === category.id) {
+              store.setActiveFilter('all');
+            }
+            loadCategories();
+            loadLinks();
+          } catch (err) {
+            console.error('Failed to delete category:', err);
+          }
+        },
+      });
     },
     [loadCategories, loadLinks],
   );
@@ -376,8 +470,11 @@ function App() {
 
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--bg-base)' }}>
+      {/* タイトルバー（ウィンドウ全体の上部） */}
+      <TitleBar />
+
       <div className="flex flex-1 overflow-hidden">
-        {/* サイドバー（タイトル含む） */}
+        {/* サイドバー */}
         <aside
           className="flex shrink-0 flex-col"
           style={{
@@ -386,7 +483,6 @@ function App() {
             borderRight: '1px solid var(--border-medium)',
           }}
         >
-          <TitleBar />
           <Sidebar
             categories={categories}
             linkCounts={linkCounts}
@@ -413,6 +509,7 @@ function App() {
             <Toolbar
               onAddLink={() => setAddDialogOpen(true)}
               onImport={() => setImportDialogOpen(true)}
+              onExport={handleExport}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
             />
@@ -444,6 +541,7 @@ function App() {
         onOpenChange={setAddDialogOpen}
         categories={categories}
         onSubmit={handleAddLink}
+        onUpdate={handleUpdateLink}
       />
 
       {/* リンク編集ダイアログ */}
@@ -469,13 +567,21 @@ function App() {
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         onComplete={() => {
-          // インポート後にfaviconを一括更新してからリンクを再読み込み
-          commands
-            .refreshFavicons()
-            .then(() => loadLinks())
-            .catch(() => loadLinks());
+          loadLinks();
           loadCategories();
+          // バックグラウンドでfaviconを1件ずつ取得
+          refreshFaviconsBackground();
         }}
+      />
+
+      {/* 確認ダイアログ */}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog((prev) => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel={confirmDialog.confirmLabel}
+        onConfirm={confirmDialog.onConfirm}
       />
     </div>
   );

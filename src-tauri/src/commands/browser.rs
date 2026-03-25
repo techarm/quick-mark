@@ -116,35 +116,35 @@ fn resolve_favicon(
     base_url: &str,
     domain: &str,
 ) -> String {
-    // 1. ページHTMLのメタデータから取得したfavicon
-    if let Some(ref favicon) = page_favicon {
-        if url_is_reachable(client, favicon) {
-            return favicon.clone();
-        }
-    }
-
-    // 2. ドメインルートの /favicon.ico
-    let root_favicon = format!("{}/favicon.ico", base_url);
-    if url_is_reachable(client, &root_favicon) {
-        return root_favicon;
-    }
-
-    // 3. ドメインルートHTMLからfavicon取得（サブパスのページと異なる場合）
-    if let Some(meta) = fetch_page_meta(client, base_url) {
-        if let Some(favicon) = meta.2 {
-            if url_is_reachable(client, &favicon) {
-                return favicon;
-            }
-        }
-    }
-
-    // 4. Google Favicon API
+    // 1. Google Favicon API（最速・高カバレッジ）
     let google_favicon = format!(
         "https://www.google.com/s2/favicons?domain={}&sz=32",
         domain
     );
     if url_is_reachable(client, &google_favicon) {
         return google_favicon;
+    }
+
+    // 2. ページHTMLのメタデータから取得したfavicon
+    if let Some(ref favicon) = page_favicon {
+        if url_is_reachable(client, favicon) {
+            return favicon.clone();
+        }
+    }
+
+    // 3. ドメインルートの /favicon.ico
+    let root_favicon = format!("{}/favicon.ico", base_url);
+    if url_is_reachable(client, &root_favicon) {
+        return root_favicon;
+    }
+
+    // 4. ドメインルートHTMLからfavicon取得
+    if let Some(meta) = fetch_page_meta(client, base_url) {
+        if let Some(favicon) = meta.2 {
+            if url_is_reachable(client, &favicon) {
+                return favicon;
+            }
+        }
     }
 
     // 5. 取得不可 → 空文字（フロントでデフォルトSVGアイコン表示）
