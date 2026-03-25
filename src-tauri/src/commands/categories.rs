@@ -59,22 +59,22 @@ fn row_to_category(row: &rusqlite::Row) -> rusqlite::Result<Category> {
 pub fn get_categories(
     db: State<'_, Mutex<AppDb>>,
 ) -> Result<Vec<Category>, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("Category operation failed: {}", e))?;
     let conn = &db.conn;
 
     let mut stmt = conn
         .prepare(
-            "SELECT c.*, COALESCE(
-                (SELECT COUNT(*) FROM links l WHERE l.category_id = c.id), 0
-             ) AS link_count
+            "SELECT c.*, COUNT(l.id) AS link_count
              FROM categories c
+             LEFT JOIN links l ON l.category_id = c.id
+             GROUP BY c.id
              ORDER BY c.position ASC, c.name ASC",
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Category operation failed: {}", e))?;
 
     let categories = stmt
         .query_map([], row_to_category)
-        .map_err(|e| e.to_string())?
+        .map_err(|e| format!("Category operation failed: {}", e))?
         .filter_map(|r| r.ok())
         .collect();
 
@@ -86,7 +86,14 @@ pub fn create_category(
     db: State<'_, Mutex<AppDb>>,
     input: CreateCategoryInput,
 ) -> Result<Category, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    if input.name.trim().is_empty() {
+        return Err("カテゴリ名は必須です".to_string());
+    }
+    if input.name.len() > 100 {
+        return Err("カテゴリ名は100文字以内にしてください".to_string());
+    }
+
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
     let id = uuid::Uuid::new_v4().to_string();
 
@@ -98,7 +105,7 @@ pub fn create_category(
                 params![parent_id],
                 |row| row.get(0),
             )
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!("Category operation failed: {}", e))?;
         path
     } else {
         String::new()
@@ -133,16 +140,16 @@ pub fn create_category(
             max_pos + 1,
         ],
     )
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| format!("Category operation failed: {}", e))?;
 
     let mut stmt = conn
         .prepare(
             "SELECT c.*, 0 AS link_count FROM categories c WHERE c.id = ?1",
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Category operation failed: {}", e))?;
     let category = stmt
         .query_row(params![id], row_to_category)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Category operation failed: {}", e))?;
 
     Ok(category)
 }
@@ -152,7 +159,7 @@ pub fn update_category(
     db: State<'_, Mutex<AppDb>>,
     input: UpdateCategoryInput,
 ) -> Result<Category, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("Category operation failed: {}", e))?;
     let conn = &db.conn;
 
     let mut sets = vec![];
@@ -194,7 +201,7 @@ pub fn update_category(
         let params_refs: Vec<&dyn rusqlite::types::ToSql> =
             values.iter().map(|p| p.as_ref()).collect();
         conn.execute(&sql, params_refs.as_slice())
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!("Category operation failed: {}", e))?;
     }
 
     let mut stmt = conn
@@ -204,10 +211,10 @@ pub fn update_category(
              ) AS link_count
              FROM categories c WHERE c.id = ?1",
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Category operation failed: {}", e))?;
     let category = stmt
         .query_row(params![input.id], row_to_category)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Category operation failed: {}", e))?;
 
     Ok(category)
 }
@@ -217,7 +224,7 @@ pub fn delete_category(
     db: State<'_, Mutex<AppDb>>,
     id: String,
 ) -> Result<(), String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("Category operation failed: {}", e))?;
     let conn = &db.conn;
 
     // カテゴリ内のリンクのcategory_idをNULLに
@@ -225,10 +232,10 @@ pub fn delete_category(
         "UPDATE links SET category_id = NULL WHERE category_id = ?1",
         params![id],
     )
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| format!("Category operation failed: {}", e))?;
 
     conn.execute("DELETE FROM categories WHERE id = ?1", params![id])
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Category operation failed: {}", e))?;
 
     Ok(())
 }

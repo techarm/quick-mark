@@ -145,14 +145,14 @@ pub fn parse_bookmarks_html(content: String) -> Result<Vec<ImportItem>, String> 
     Ok(items)
 }
 
-/// インポートアイテムをデータベースに保存
+/// インポートアイテムをデータベースに保存（トランザクション使用）
 #[tauri::command]
 pub fn import_bookmarks(
     db: State<'_, Mutex<AppDb>>,
     items: Vec<ImportItem>,
 ) -> Result<ImportResult, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
-    let conn = &db.conn;
+    let mut db = db.lock().map_err(|e| format!("Import operation failed: {}", e))?;
+    let tx = db.conn.transaction().map_err(|e| format!("Failed to start transaction: {}", e))?;
 
     let mut imported = 0i64;
     let mut skipped = 0i64;
@@ -161,14 +161,26 @@ pub fn import_bookmarks(
     // フォルダ名→カテゴリIDのキャッシュ
     let mut folder_cache: std::collections::HashMap<String, String> = std::collections::HashMap::new();
 
+    // 重複チェック用のprepared statement
+    let mut dup_stmt = tx
+        .prepare("SELECT 1 FROM links WHERE url = ?1 LIMIT 1")
+        .map_err(|e| format!("Import operation failed: {}", e))?;
+
     for item in &items {
+        // URLバリデーション（http/httpsのみ許可）
+        if let Ok(parsed) = url::Url::parse(&item.url) {
+            if parsed.scheme() != "http" && parsed.scheme() != "https" {
+                skipped += 1;
+                continue;
+            }
+        } else {
+            skipped += 1;
+            continue;
+        }
+
         // URLの重複チェック
-        let exists: bool = conn
-            .query_row(
-                "SELECT COUNT(*) > 0 FROM links WHERE url = ?1",
-                params![item.url],
-                |row| row.get(0),
-            )
+        let exists: bool = dup_stmt
+            .query_row(params![item.url], |_| Ok(true))
             .unwrap_or(false);
 
         if exists {
@@ -182,7 +194,7 @@ pub fn import_bookmarks(
                 Some(cached_id.clone())
             } else {
                 // 既存カテゴリを検索
-                let existing: Option<String> = conn
+                let existing: Option<String> = tx
                     .query_row(
                         "SELECT id FROM categories WHERE name = ?1",
                         params![folder_name],
@@ -197,11 +209,11 @@ pub fn import_bookmarks(
                     // 新規カテゴリ作成
                     let id = uuid::Uuid::new_v4().to_string();
                     let path = format!("/{}", id);
-                    conn.execute(
+                    tx.execute(
                         "INSERT INTO categories (id, name, path) VALUES (?1, ?2, ?3)",
                         params![id, folder_name, path],
                     )
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e| format!("Import operation failed: {}", e))?;
                     folder_cache.insert(folder_name.clone(), id.clone());
                     categories_created += 1;
                     Some(id)
@@ -213,14 +225,18 @@ pub fn import_bookmarks(
 
         // リンクを作成
         let link_id = uuid::Uuid::new_v4().to_string();
-        conn.execute(
+        tx.execute(
             "INSERT INTO links (id, url, title, category_id) VALUES (?1, ?2, ?3, ?4)",
             params![link_id, item.url, item.title, category_id],
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Import operation failed: {}", e))?;
 
         imported += 1;
     }
+
+    // prepared statementをdropしてからcommit
+    drop(dup_stmt);
+    tx.commit().map_err(|e| format!("Failed to commit import: {}", e))?;
 
     Ok(ImportResult {
         imported,

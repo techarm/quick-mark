@@ -177,7 +177,7 @@ fn resolve_url(href: &str, page_url: &str) -> String {
     }
 }
 
-fn extract_domain(url: &str) -> String {
+pub fn extract_domain(url: &str) -> String {
     url.split("//")
         .nth(1)
         .unwrap_or(url)

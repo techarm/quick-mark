@@ -3,7 +3,27 @@ use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::State;
 
+use crate::commands::browser::extract_domain;
 use crate::db::AppDb;
+
+/// URLを検証する。http/httpsスキームのみ許可。
+fn validate_url(url: &str) -> Result<(), String> {
+    let parsed = url::Url::parse(url)
+        .map_err(|_| format!("無効なURLです: {}", url))?;
+    match parsed.scheme() {
+        "http" | "https" => Ok(()),
+        scheme => Err(format!("許可されていないURLスキームです: {}", scheme)),
+    }
+}
+
+/// 文字列の長さを検証する。
+fn validate_length(field: &str, value: &str, max: usize) -> Result<(), String> {
+    if value.len() > max {
+        Err(format!("{}は{}文字以内にしてください", field, max))
+    } else {
+        Ok(())
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Link {
@@ -73,7 +93,7 @@ pub fn get_links(
     category_id: Option<String>,
     filter: Option<String>,
 ) -> Result<Vec<Link>, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
     let (sql, filter_params): (String, Vec<Box<dyn rusqlite::types::ToSql>>) = match filter
@@ -115,10 +135,10 @@ pub fn get_links(
     let params_refs: Vec<&dyn rusqlite::types::ToSql> =
         filter_params.iter().map(|p| p.as_ref()).collect();
 
-    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare(&sql).map_err(|e| format!("Failed to prepare query: {}", e))?;
     let links = stmt
         .query_map(params_refs.as_slice(), row_to_link)
-        .map_err(|e| e.to_string())?
+        .map_err(|e| format!("Failed to get links: {}", e))?
         .filter_map(|r| r.ok())
         .collect();
 
@@ -130,7 +150,13 @@ pub fn create_link(
     db: State<'_, Mutex<AppDb>>,
     input: CreateLinkInput,
 ) -> Result<Link, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    validate_url(&input.url)?;
+    validate_length("タイトル", &input.title, 500)?;
+    if let Some(ref desc) = input.description {
+        validate_length("説明", desc, 2000)?;
+    }
+
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
     let id = uuid::Uuid::new_v4().to_string();
 
@@ -149,14 +175,14 @@ pub fn create_link(
             input.is_pinned.unwrap_or(false) as i64,
         ],
     )
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| format!("Failed to create link: {}", e))?;
 
     let mut stmt = conn
         .prepare("SELECT * FROM links WHERE id = ?1")
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to query link: {}", e))?;
     let link = stmt
         .query_row(params![id], row_to_link)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to read created link: {}", e))?;
 
     Ok(link)
 }
@@ -166,7 +192,17 @@ pub fn update_link(
     db: State<'_, Mutex<AppDb>>,
     input: UpdateLinkInput,
 ) -> Result<Link, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    if let Some(ref url) = input.url {
+        validate_url(url)?;
+    }
+    if let Some(ref title) = input.title {
+        validate_length("タイトル", title, 500)?;
+    }
+    if let Some(ref desc) = input.description {
+        validate_length("説明", desc, 2000)?;
+    }
+
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
     let mut sets = vec!["updated_at = datetime('now')".to_string()];
@@ -203,14 +239,14 @@ pub fn update_link(
         values.iter().map(|p| p.as_ref()).collect();
 
     conn.execute(&sql, params_refs.as_slice())
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to update link: {}", e))?;
 
     let mut stmt = conn
         .prepare("SELECT * FROM links WHERE id = ?1")
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to query link: {}", e))?;
     let link = stmt
         .query_row(params![input.id], row_to_link)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to read updated link: {}", e))?;
 
     Ok(link)
 }
@@ -220,10 +256,10 @@ pub fn delete_link(
     db: State<'_, Mutex<AppDb>>,
     id: String,
 ) -> Result<(), String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
     conn.execute("DELETE FROM links WHERE id = ?1", params![id])
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to delete link: {}", e))?;
     Ok(())
 }
 
@@ -232,7 +268,7 @@ pub fn search_links(
     db: State<'_, Mutex<AppDb>>,
     query: String,
 ) -> Result<Vec<Link>, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
     if query.trim().is_empty() {
@@ -326,7 +362,7 @@ pub fn open_link(
     db: State<'_, Mutex<AppDb>>,
     id: String,
 ) -> Result<String, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
     // アクセス回数と最終アクセス時刻を更新
@@ -349,7 +385,7 @@ pub fn open_link(
 pub fn cleanup_expired_links(
     db: State<'_, Mutex<AppDb>>,
 ) -> Result<i64, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
     // 7日以上前に期限切れになったリンクを削除
@@ -368,7 +404,7 @@ pub fn cleanup_expired_links(
 pub fn get_links_without_favicon(
     db: State<'_, Mutex<AppDb>>,
 ) -> Result<Vec<(String, String)>, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
     let mut stmt = conn
@@ -391,7 +427,7 @@ pub fn refresh_single_favicon(
     id: String,
     favicon_url: String,
 ) -> Result<(), String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
     conn.execute(
@@ -408,7 +444,7 @@ pub fn refresh_single_favicon(
 pub fn refresh_favicons(
     db: State<'_, Mutex<AppDb>>,
 ) -> Result<i64, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
     let mut stmt = conn
@@ -423,16 +459,7 @@ pub fn refresh_favicons(
 
     let mut updated = 0i64;
     for (id, url) in &links {
-        let domain = url
-            .split("//")
-            .nth(1)
-            .unwrap_or(url)
-            .split('/')
-            .next()
-            .unwrap_or(url)
-            .split(':')
-            .next()
-            .unwrap_or(url);
+        let domain = extract_domain(url);
         let favicon_url = format!("https://www.google.com/s2/favicons?domain={}&sz=32", domain);
         conn.execute(
             "UPDATE links SET favicon_url = ?1 WHERE id = ?2",
@@ -452,20 +479,31 @@ pub fn move_links_to_category(
     link_ids: Vec<String>,
     category_id: Option<String>,
 ) -> Result<i64, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
-    let mut moved = 0i64;
-    for id in &link_ids {
-        conn.execute(
-            "UPDATE links SET category_id = ?1, updated_at = datetime('now') WHERE id = ?2",
-            params![category_id, id],
-        )
-        .map_err(|e| e.to_string())?;
-        moved += 1;
+    if link_ids.is_empty() {
+        return Ok(0);
     }
 
-    Ok(moved)
+    let placeholders: Vec<String> = (0..link_ids.len()).map(|i| format!("?{}", i + 2)).collect();
+    let sql = format!(
+        "UPDATE links SET category_id = ?1, updated_at = datetime('now') WHERE id IN ({})",
+        placeholders.join(", ")
+    );
+
+    let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = vec![Box::new(category_id)];
+    for id in &link_ids {
+        param_values.push(Box::new(id.clone()));
+    }
+    let params_refs: Vec<&dyn rusqlite::types::ToSql> =
+        param_values.iter().map(|p| p.as_ref()).collect();
+
+    let moved = conn
+        .execute(&sql, params_refs.as_slice())
+        .map_err(|e| format!("Failed to move links: {}", e))?;
+
+    Ok(moved as i64)
 }
 
 /// 複数リンクを一括削除
@@ -474,17 +512,29 @@ pub fn bulk_delete_links(
     db: State<'_, Mutex<AppDb>>,
     link_ids: Vec<String>,
 ) -> Result<i64, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
-    let mut deleted = 0i64;
-    for id in &link_ids {
-        conn.execute("DELETE FROM links WHERE id = ?1", params![id])
-            .map_err(|e| e.to_string())?;
-        deleted += 1;
+    if link_ids.is_empty() {
+        return Ok(0);
     }
 
-    Ok(deleted)
+    let placeholders: Vec<String> = (0..link_ids.len()).map(|i| format!("?{}", i + 1)).collect();
+    let sql = format!(
+        "DELETE FROM links WHERE id IN ({})",
+        placeholders.join(", ")
+    );
+
+    let param_values: Vec<Box<dyn rusqlite::types::ToSql>> =
+        link_ids.iter().map(|id| Box::new(id.clone()) as Box<dyn rusqlite::types::ToSql>).collect();
+    let params_refs: Vec<&dyn rusqlite::types::ToSql> =
+        param_values.iter().map(|p| p.as_ref()).collect();
+
+    let deleted = conn
+        .execute(&sql, params_refs.as_slice())
+        .map_err(|e| format!("Failed to bulk delete links: {}", e))?;
+
+    Ok(deleted as i64)
 }
 
 // === 重複URL検知 ===
@@ -504,7 +554,7 @@ pub fn check_duplicate_url(
     db: State<'_, Mutex<AppDb>>,
     url: String,
 ) -> Result<Option<DuplicateInfo>, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
     let result = conn.query_row(
@@ -538,7 +588,7 @@ pub fn check_duplicate_urls(
     db: State<'_, Mutex<AppDb>>,
     urls: Vec<String>,
 ) -> Result<Vec<String>, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
     let mut duplicates = Vec::new();

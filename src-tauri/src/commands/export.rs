@@ -48,7 +48,7 @@ pub struct ExportData {
 
 #[tauri::command]
 pub fn export_data(db: State<'_, Mutex<AppDb>>) -> Result<String, String> {
-    let db = db.lock().map_err(|e| e.to_string())?;
+    let db = db.lock().map_err(|e| format!("Export operation failed: {}", e))?;
     let conn = &db.conn;
 
     // カテゴリを取得
@@ -57,7 +57,7 @@ pub fn export_data(db: State<'_, Mutex<AppDb>>) -> Result<String, String> {
             "SELECT id, name, parent_id, path, icon, color, search_alias, position, created_at
              FROM categories ORDER BY position, name",
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Export operation failed: {}", e))?;
 
     let categories: Vec<ExportCategory> = cat_stmt
         .query_map(params![], |row| {
@@ -73,7 +73,7 @@ pub fn export_data(db: State<'_, Mutex<AppDb>>) -> Result<String, String> {
                 created_at: row.get(8)?,
             })
         })
-        .map_err(|e| e.to_string())?
+        .map_err(|e| format!("Export operation failed: {}", e))?
         .filter_map(|r| r.ok())
         .collect();
 
@@ -89,7 +89,7 @@ pub fn export_data(db: State<'_, Mutex<AppDb>>) -> Result<String, String> {
              LEFT JOIN categories c ON l.category_id = c.id
              ORDER BY l.position, l.created_at DESC",
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Export operation failed: {}", e))?;
 
     let links: Vec<ExportLink> = link_stmt
         .query_map(params![], |row| {
@@ -111,14 +111,14 @@ pub fn export_data(db: State<'_, Mutex<AppDb>>) -> Result<String, String> {
                 updated_at: row.get(14)?,
             })
         })
-        .map_err(|e| e.to_string())?
+        .map_err(|e| format!("Export operation failed: {}", e))?
         .filter_map(|r| r.ok())
         .collect();
 
     // exported_atはSQLiteのdatetime('now')と同じ形式
     let now: String = conn
         .query_row("SELECT datetime('now')", [], |row| row.get(0))
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Export operation failed: {}", e))?;
     let export = ExportData {
         version: 1,
         exported_at: now,

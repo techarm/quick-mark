@@ -19,8 +19,10 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .setup(|app| {
-            let db_path = db::get_db_path(&app.handle());
-            let app_db = db::init_db(&db_path).expect("Failed to initialize database");
+            let db_path = db::get_db_path(&app.handle())
+                .map_err(|e| Box::<dyn std::error::Error>::from(e))?;
+            let app_db = db::init_db(&db_path)
+                .map_err(|e| Box::<dyn std::error::Error>::from(e.to_string()))?;
             app.manage(Mutex::new(app_db));
             Ok(())
         })

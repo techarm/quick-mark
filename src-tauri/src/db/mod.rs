@@ -6,13 +6,14 @@ pub struct AppDb {
     pub conn: Connection,
 }
 
-pub fn get_db_path(app_handle: &tauri::AppHandle) -> PathBuf {
+pub fn get_db_path(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
     let app_dir = app_handle
         .path()
         .app_data_dir()
-        .expect("Failed to get app data dir");
-    std::fs::create_dir_all(&app_dir).expect("Failed to create app data dir");
-    app_dir.join("quickmark.db")
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+    std::fs::create_dir_all(&app_dir)
+        .map_err(|e| format!("Failed to create app data dir: {}", e))?;
+    Ok(app_dir.join("quickmark.db"))
 }
 
 pub fn init_db(db_path: &PathBuf) -> Result<AppDb> {
@@ -77,6 +78,9 @@ fn run_migrations(conn: &Connection) -> Result<()> {
         CREATE INDEX IF NOT EXISTS idx_links_pinned ON links(is_pinned) WHERE is_pinned = 1;
         CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);
         CREATE INDEX IF NOT EXISTS idx_categories_path ON categories(path);
+        CREATE INDEX IF NOT EXISTS idx_categories_name ON categories(name);
+        CREATE INDEX IF NOT EXISTS idx_links_url ON links(url);
+        CREATE INDEX IF NOT EXISTS idx_links_created ON links(created_at DESC);
         ",
     )?;
 

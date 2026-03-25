@@ -3054,6 +3054,7 @@ dependencies = [
  "tauri-plugin-global-shortcut",
  "tauri-plugin-opener",
  "tauri-plugin-shell",
+ "url",
  "uuid",
 ]
 
