@@ -63,9 +63,14 @@ export function SearchWindow() {
     };
   }, [query, doSearch]);
 
-  // ウィンドウ表示時にクエリをクリアしてフォーカスを復元
+  // ウィンドウ表示時にクエリをクリア・テーマ同期・フォーカス復元
   useEffect(() => {
     const handleFocus = () => {
+      // メインウィンドウで変更されたテーマを同期
+      const theme = localStorage.getItem('quickmark-theme');
+      if (theme === 'light' || theme === 'dark') {
+        document.documentElement.dataset.theme = theme;
+      }
       setQuery('');
       doSearch('');
       setTimeout(() => inputRef.current?.focus(), 50);
