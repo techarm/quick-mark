@@ -49,6 +49,16 @@
   --shadow-overlay: 0 24px 48px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.3);
   --shadow-glow-accent: 0 2px 12px rgba(226, 80, 80, 0.25);
 
+  /* === UI固有色 === */
+  --focus-ring: rgba(226, 80, 80, 0.12);
+  --overlay-backdrop: rgba(0, 0, 0, 0.55);
+  --scrollbar-thumb: rgba(255, 200, 200, 0.08);
+  --scrollbar-thumb-hover: rgba(255, 200, 200, 0.16);
+  --selection-bg: rgba(226, 80, 80, 0.3);
+  --glass-inset: rgba(255, 255, 255, 0.04);
+  --card-inset: rgba(255, 200, 200, 0.04);
+  --danger-hover-bg: rgba(255, 71, 87, 0.1);
+
   /* === 角丸 === */
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -60,4 +70,49 @@
   --detail-panel-width: 320px;
   --titlebar-height: 38px;
   --toolbar-height: 52px;
+}
+
+/* ============================================
+   ライトモード
+   ============================================ */
+
+[data-theme="light"] {
+  /* === 背景レイヤー === */
+  --bg-base: #f5f0f0;
+  --bg-sidebar: #ece6e6;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f9f5f5;
+  --bg-overlay: #ffffff;
+  --bg-input: rgba(200, 180, 180, 0.15);
+  --bg-hover: rgba(226, 80, 80, 0.06);
+  --bg-active: rgba(226, 80, 80, 0.1);
+
+  /* === テキスト === */
+  --text-primary: rgba(30, 20, 20, 0.92);
+  --text-secondary: rgba(80, 60, 60, 0.72);
+  --text-tertiary: rgba(120, 100, 100, 0.5);
+  --text-on-accent: #ffffff;
+
+  /* === ボーダー === */
+  --border-subtle: rgba(120, 80, 80, 0.1);
+  --border-medium: rgba(120, 80, 80, 0.16);
+  --border-hover: rgba(120, 80, 80, 0.24);
+  --border-focus: rgba(226, 80, 80, 0.5);
+
+  /* === シャドウ === */
+  --shadow-sm: 0 1px 3px rgba(80, 40, 40, 0.08);
+  --shadow-md: 0 4px 12px rgba(80, 40, 40, 0.1);
+  --shadow-lg: 0 12px 32px rgba(80, 40, 40, 0.12);
+  --shadow-overlay: 0 24px 48px rgba(80, 40, 40, 0.12), 0 8px 16px rgba(80, 40, 40, 0.08);
+  --shadow-glow-accent: 0 2px 12px rgba(226, 80, 80, 0.15);
+
+  /* === UI固有色 === */
+  --focus-ring: rgba(226, 80, 80, 0.18);
+  --overlay-backdrop: rgba(0, 0, 0, 0.25);
+  --scrollbar-thumb: rgba(120, 80, 80, 0.12);
+  --scrollbar-thumb-hover: rgba(120, 80, 80, 0.24);
+  --selection-bg: rgba(226, 80, 80, 0.2);
+  --glass-inset: rgba(255, 255, 255, 0.5);
+  --card-inset: rgba(255, 255, 255, 0.6);
+  --danger-hover-bg: rgba(255, 71, 87, 0.08);
 }

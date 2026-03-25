@@ -264,7 +264,7 @@ function SearchResultItem({ link, onSelect }: { link: Link; onSelect: () => void
         cursor: 'pointer',
         transition: 'background 75ms ease',
       }}
-      className="aria-selected:bg-[rgba(226,80,80,0.1)]"
+      className="aria-selected:bg-[var(--bg-active)]"
     >
       <div
         style={{

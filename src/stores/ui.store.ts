@@ -2,8 +2,24 @@ import { create } from 'zustand';
 import type { SmartFilter } from '../lib/types';
 
 type ViewMode = 'list' | 'card';
+type Theme = 'light' | 'dark';
+
+function getInitialTheme(): Theme {
+  const stored = localStorage.getItem('quickmark-theme');
+  if (stored === 'light' || stored === 'dark') return stored;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function applyTheme(theme: Theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem('quickmark-theme', theme);
+}
 
 interface UIState {
+  // テーマ
+  theme: Theme;
+  toggleTheme: () => void;
+
   // サイドバー
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
@@ -39,6 +55,14 @@ interface UIState {
 }
 
 export const useUIStore = create<UIState>((set) => ({
+  theme: getInitialTheme(),
+  toggleTheme: () =>
+    set((s) => {
+      const next: Theme = s.theme === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      return { theme: next };
+    }),
+
   sidebarCollapsed: false,
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
 

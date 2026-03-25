@@ -56,7 +56,7 @@ body {
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 0 1px var(--glass-inset),
     var(--shadow-overlay);
 }
 
@@ -89,7 +89,7 @@ body {
 
 .input-field:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(226, 80, 80, 0.12);
+  box-shadow: 0 0 0 3px var(--focus-ring, rgba(226, 80, 80, 0.12));
 }
 
 .input-field::placeholder {
@@ -191,7 +191,7 @@ input[type="number"].input-field::-webkit-outer-spin-button {
 }
 
 .btn:focus-visible {
-  box-shadow: 0 0 0 3px rgba(226, 80, 80, 0.2);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 /* プライマリ（赤グラデーション） */
@@ -241,7 +241,7 @@ input[type="number"].input-field::-webkit-outer-spin-button {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--overlay-backdrop);
   animation: overlay-show 200ms ease;
 }
 
@@ -350,7 +350,7 @@ input[type="number"].input-field::-webkit-outer-spin-button {
    ============================================ */
 
 .card-gradient {
-  box-shadow: inset 0 1px 0 rgba(255, 200, 200, 0.04);
+  box-shadow: inset 0 1px 0 var(--card-inset);
   background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-surface) 100%);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -363,7 +363,7 @@ input[type="number"].input-field::-webkit-outer-spin-button {
 .card-gradient:hover {
   border-color: var(--border-hover);
   box-shadow:
-    inset 0 1px 0 rgba(255, 200, 200, 0.04),
+    inset 0 1px 0 var(--card-inset),
     var(--shadow-sm);
   transform: translateY(-1px);
 }
@@ -393,12 +393,12 @@ input[type="number"].input-field::-webkit-outer-spin-button {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 200, 200, 0.08);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 200, 200, 0.16);
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* ============================================
@@ -406,7 +406,7 @@ input[type="number"].input-field::-webkit-outer-spin-button {
    ============================================ */
 
 ::selection {
-  background: rgba(226, 80, 80, 0.3);
+  background: var(--selection-bg);
   color: var(--text-primary);
 }
 
@@ -502,7 +502,7 @@ input[type="number"].input-field::-webkit-outer-spin-button {
 
 .dropdown-menu-item-danger:hover,
 .dropdown-menu-item-danger[data-highlighted] {
-  background: rgba(255, 71, 87, 0.1);
+  background: var(--danger-hover-bg);
   color: var(--accent-danger);
 }
 
