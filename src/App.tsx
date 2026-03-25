@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast, Toaster } from 'sonner';
 import { safeOpenUrl } from './lib/utils';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ImportDialog } from './components/ImportDialog';
@@ -65,6 +66,7 @@ function App() {
   }>({ open: false, title: '', message: '', onConfirm: () => {} });
 
   const {
+    theme,
     activeFilter,
     activeCategoryId,
     selectedLinkId,
@@ -89,6 +91,7 @@ function App() {
       }
     } catch (err) {
       console.error('Failed to load links:', err);
+      toast.error('リンクの読み込みに失敗しました');
       setLinks([]);
     }
   }, [searchQuery, activeFilter, activeCategoryId]);
@@ -99,6 +102,7 @@ function App() {
       setCategories(cats);
     } catch (err) {
       console.error('Failed to load categories:', err);
+      toast.error('カテゴリの読み込みに失敗しました');
     }
   }, []);
 
@@ -239,6 +243,7 @@ function App() {
         loadLinks();
       } catch (err) {
         console.error('Failed to open link:', err);
+        toast.error('リンクを開けませんでした');
       }
     },
     [loadLinks],
@@ -251,8 +256,10 @@ function App() {
         await commands.createLink(input);
         loadLinks();
         loadCategories();
+        toast.success('リンクを追加しました');
       } catch (err) {
         console.error('Failed to create link:', err);
+        toast.error('リンクの追加に失敗しました');
       }
     },
     [loadLinks, loadCategories],
@@ -277,9 +284,11 @@ function App() {
 
       if (filePath) {
         await writeTextFile(filePath, jsonStr);
+        toast.success('エクスポートが完了しました');
       }
     } catch (err) {
       console.error('Failed to export:', err);
+      toast.error('エクスポートに失敗しました');
     }
   }, []);
 
@@ -296,8 +305,10 @@ function App() {
         await commands.updateLink(input);
         loadLinks();
         loadCategories();
+        toast.success('リンクを更新しました');
       } catch (err) {
         console.error('Failed to update link:', err);
+        toast.error('リンクの更新に失敗しました');
       }
     },
     [loadLinks, loadCategories],
@@ -320,8 +331,10 @@ function App() {
             }
             loadLinks();
             loadCategories();
+            toast.success('リンクを削除しました');
           } catch (err) {
             console.error('Failed to delete link:', err);
+            toast.error('リンクの削除に失敗しました');
           }
         },
       });
@@ -340,6 +353,7 @@ function App() {
         loadLinks();
       } catch (err) {
         console.error('Failed to toggle pin:', err);
+        toast.error('ピン留めの変更に失敗しました');
       }
     },
     [loadLinks],
@@ -355,8 +369,10 @@ function App() {
         useUIStore.getState().clearSelection();
         loadLinks();
         loadCategories();
+        toast.success(`${ids.length}件のリンクを移動しました`);
       } catch (err) {
         console.error('Failed to move links:', err);
+        toast.error('リンクの移動に失敗しました');
       }
     },
     [loadLinks, loadCategories],
@@ -376,8 +392,10 @@ function App() {
           useUIStore.getState().clearSelection();
           loadLinks();
           loadCategories();
+          toast.success(`${ids.length}件のリンクを削除しました`);
         } catch (err) {
           console.error('Failed to delete links:', err);
+          toast.error('リンクの一括削除に失敗しました');
         }
       },
     });
@@ -411,8 +429,10 @@ function App() {
             }
             loadCategories();
             loadLinks();
+            toast.success('カテゴリを削除しました');
           } catch (err) {
             console.error('Failed to delete category:', err);
+            toast.error('カテゴリの削除に失敗しました');
           }
         },
       });
@@ -434,12 +454,15 @@ function App() {
             color: input.color,
             search_alias: input.search_alias,
           });
+          toast.success('カテゴリを更新しました');
         } else {
           await commands.createCategory(input);
+          toast.success('カテゴリを作成しました');
         }
         loadCategories();
       } catch (err) {
         console.error('Failed to save category:', err);
+        toast.error('カテゴリの保存に失敗しました');
       }
     },
     [loadCategories],
@@ -572,6 +595,19 @@ function App() {
         message={confirmDialog.message}
         confirmLabel={confirmDialog.confirmLabel}
         onConfirm={confirmDialog.onConfirm}
+      />
+
+      {/* トースト通知 */}
+      <Toaster
+        position="bottom-right"
+        theme={theme}
+        toastOptions={{
+          style: {
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border-medium)',
+            color: 'var(--text-primary)',
+          },
+        }}
       />
     </div>
   );
