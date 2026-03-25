@@ -3,6 +3,7 @@ import { ExternalLink, Pin, Search, Timer } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as commands from './lib/commands';
 import type { Link } from './lib/types';
+import { safeOpenUrl } from './lib/utils';
 
 const ITEM_HEIGHT = 52;
 const HEADER_HEIGHT = 52;
@@ -10,15 +11,6 @@ const FOOTER_HEIGHT = 40;
 const EMPTY_HEIGHT = 80;
 const MAX_VISIBLE_ITEMS = 7;
 const PADDING = 16; // リスト上下パディング
-
-async function safeOpenUrl(url: string) {
-  try {
-    const { openUrl } = await import('@tauri-apps/plugin-opener');
-    await openUrl(url);
-  } catch {
-    window.open(url, '_blank');
-  }
-}
 
 async function hideWindow() {
   try {

@@ -1,15 +1,5 @@
-// openUrl を動的インポートで安全に呼び出す
-async function safeOpenUrl(url: string) {
-  try {
-    const { openUrl } = await import('@tauri-apps/plugin-opener');
-    await openUrl(url);
-  } catch {
-    // ブラウザ環境ではwindow.openにフォールバック
-    window.open(url, '_blank');
-  }
-}
-
 import { useCallback, useEffect, useState } from 'react';
+import { safeOpenUrl } from './lib/utils';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ImportDialog } from './components/ImportDialog';
 import { AddLinkDialog } from './components/main/AddLinkDialog';

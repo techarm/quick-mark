@@ -49,9 +49,6 @@ interface UIState {
   detailPanelOpen: boolean;
   setDetailPanelOpen: (open: boolean) => void;
 
-  // 検索パレット
-  searchPaletteOpen: boolean;
-  setSearchPaletteOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -101,6 +98,4 @@ export const useUIStore = create<UIState>((set) => ({
   detailPanelOpen: false,
   setDetailPanelOpen: (open) => set({ detailPanelOpen: open }),
 
-  searchPaletteOpen: false,
-  setSearchPaletteOpen: (open) => set({ searchPaletteOpen: open }),
 }));

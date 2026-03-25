@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import type { Link } from '../../lib/types';
+import { formatDate, getDomain } from '../../lib/utils';
 import { useUIStore } from '../../stores/ui.store';
 
 interface LinkDetailProps {
@@ -340,25 +341,3 @@ function DetailRow({
   );
 }
 
-function getDomain(url: string): string {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
-}
-
-function formatDate(dateStr: string): string {
-  try {
-    const date = new Date(dateStr);
-    return new Intl.DateTimeFormat('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
-  } catch {
-    return dateStr;
-  }
-}

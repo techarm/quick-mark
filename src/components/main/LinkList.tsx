@@ -2,6 +2,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ExternalLink, MoreHorizontal, Pencil, Pin, PinOff, Timer, Trash2 } from 'lucide-react';
 import { useCallback, useRef } from 'react';
 import type { Link } from '../../lib/types';
+import { getDomain, getExpiryInfo } from '../../lib/utils';
 import { useUIStore } from '../../stores/ui.store';
 
 interface LinkListProps {
@@ -577,30 +578,3 @@ function LinkCard({
   );
 }
 
-function getDomain(url: string): string {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
-}
-
-function getExpiryInfo(link: Link): { label: string; urgent: boolean } | null {
-  if (!link.is_temporary || !link.expires_at) return null;
-
-  const now = new Date();
-  const expires = new Date(link.expires_at);
-  const diffMs = expires.getTime() - now.getTime();
-
-  if (diffMs < 0) {
-    return { label: '期限切れ', urgent: true };
-  }
-
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays <= 1) {
-    const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
-    return { label: `あと${diffHours}時間`, urgent: true };
-  }
-
-  return { label: `あと${diffDays}日`, urgent: false };
-}
