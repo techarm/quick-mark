@@ -1,7 +1,7 @@
 use rusqlite::params;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::State;
 
 use crate::db::AppDb;
@@ -148,7 +148,7 @@ pub fn parse_bookmarks_html(content: String) -> Result<Vec<ImportItem>, String> 
 /// インポートアイテムをデータベースに保存（トランザクション使用）
 #[tauri::command]
 pub fn import_bookmarks(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     items: Vec<ImportItem>,
 ) -> Result<ImportResult, String> {
     let mut db = db.lock().map_err(|e| format!("Import operation failed: {}", e))?;

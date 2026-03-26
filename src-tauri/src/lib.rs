@@ -1,7 +1,8 @@
 mod commands;
 mod db;
+mod server;
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::{Manager, RunEvent, WindowEvent};
 
 use commands::browser::*;
@@ -10,6 +11,20 @@ use commands::credentials::*;
 use commands::export::*;
 use commands::import::*;
 use commands::links::*;
+
+fn ensure_api_token(app_data_dir: &std::path::Path) -> Result<String, String> {
+    let token_path = app_data_dir.join("api_token");
+    if token_path.exists() {
+        std::fs::read_to_string(&token_path)
+            .map(|s| s.trim().to_string())
+            .map_err(|e| format!("Failed to read API token: {}", e))
+    } else {
+        let token = uuid::Uuid::new_v4().to_string();
+        std::fs::write(&token_path, &token)
+            .map_err(|e| format!("Failed to write API token: {}", e))?;
+        Ok(token)
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -25,7 +40,26 @@ pub fn run() {
                 .map_err(|e| Box::<dyn std::error::Error>::from(e))?;
             let app_db = db::init_db(&db_path)
                 .map_err(|e| Box::<dyn std::error::Error>::from(e.to_string()))?;
-            app.manage(Mutex::new(app_db));
+
+            let app_data_dir = app
+                .handle()
+                .path()
+                .app_data_dir()
+                .map_err(|e| Box::<dyn std::error::Error>::from(e.to_string()))?;
+
+            let db = Arc::new(Mutex::new(app_db));
+
+            // APIトークン生成/読み込み
+            let token = ensure_api_token(&app_data_dir)
+                .map_err(|e| Box::<dyn std::error::Error>::from(e))?;
+
+            // HTTPサーバーをバックグラウンドスレッドで起動
+            let server_db = Arc::clone(&db);
+            std::thread::spawn(move || {
+                server::start_server(server_db, token, app_data_dir);
+            });
+
+            app.manage(db);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

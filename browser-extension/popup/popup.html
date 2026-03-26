@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <svg class="logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+      </svg>
+      <h1>Quick Mark</h1>
+    </div>
+
+    <div id="loading" class="status-message">読み込み中...</div>
+
+    <div id="error" class="status-message error" hidden></div>
+
+    <div id="not-configured" hidden>
+      <p class="status-message">APIトークンが未設定です。</p>
+      <button id="open-options" class="btn btn-secondary">設定を開く</button>
+    </div>
+
+    <div id="content" hidden>
+      <div id="simple-mode">
+        <div class="page-info">
+          <div id="page-title" class="page-title"></div>
+          <div id="page-url" class="page-url"></div>
+        </div>
+
+        <div id="duplicate-info" class="duplicate-info" hidden>
+          <span class="check-mark">✓</span> 保存済み
+          <span id="duplicate-category" class="duplicate-category"></span>
+        </div>
+
+        <div id="actions" class="actions">
+          <button id="save-btn" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            保存
+          </button>
+          <button id="expand-btn" class="btn btn-secondary btn-small">▼ 詳細</button>
+        </div>
+      </div>
+
+      <div id="expanded-mode" hidden>
+        <div class="form-group">
+          <label for="edit-title">タイトル</label>
+          <input type="text" id="edit-title" class="input" />
+        </div>
+
+        <div class="form-group">
+          <label>URL</label>
+          <div id="edit-url" class="page-url"></div>
+        </div>
+
+        <div class="actions">
+          <button id="save-expanded-btn" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            保存
+          </button>
+          <button id="collapse-btn" class="btn btn-secondary btn-small">▲ 閉じる</button>
+        </div>
+      </div>
+
+      <div id="save-success" class="status-message success" hidden>
+        <span class="check-mark">✓</span> 保存しました
+      </div>
+    </div>
+  </div>
+
+  <script src="../lib/api.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

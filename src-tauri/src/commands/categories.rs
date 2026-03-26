@@ -1,6 +1,6 @@
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::State;
 
 use crate::db::AppDb;
@@ -57,7 +57,7 @@ fn row_to_category(row: &rusqlite::Row) -> rusqlite::Result<Category> {
 
 #[tauri::command]
 pub fn get_categories(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
 ) -> Result<Vec<Category>, String> {
     let db = db.lock().map_err(|e| format!("Category operation failed: {}", e))?;
     let conn = &db.conn;
@@ -83,7 +83,7 @@ pub fn get_categories(
 
 #[tauri::command]
 pub fn create_category(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     input: CreateCategoryInput,
 ) -> Result<Category, String> {
     if input.name.trim().is_empty() {
@@ -156,7 +156,7 @@ pub fn create_category(
 
 #[tauri::command]
 pub fn update_category(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     input: UpdateCategoryInput,
 ) -> Result<Category, String> {
     let db = db.lock().map_err(|e| format!("Category operation failed: {}", e))?;
@@ -221,7 +221,7 @@ pub fn update_category(
 
 #[tauri::command]
 pub fn delete_category(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     id: String,
 ) -> Result<(), String> {
     let db = db.lock().map_err(|e| format!("Category operation failed: {}", e))?;

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Quick Mark 設定</h1>
+
+    <div class="form-group">
+      <label for="api-token">APIトークン</label>
+      <div class="input-group">
+        <input type="password" id="api-token" class="input" placeholder="APIトークンを入力" />
+        <button id="toggle-token" class="btn btn-icon" title="表示/非表示">👁</button>
+      </div>
+      <p class="hint">トークンは <code>~/Library/Application Support/quick-mark/api_token</code> にあります</p>
+    </div>
+
+    <div class="form-group">
+      <label for="api-port">ポート</label>
+      <div class="input-group">
+        <input type="number" id="api-port" class="input" placeholder="21579" min="21579" max="21589" />
+        <button id="discover-port" class="btn btn-secondary">自動検出</button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="save-btn" class="btn btn-primary">保存</button>
+      <button id="test-btn" class="btn btn-secondary">接続テスト</button>
+    </div>
+
+    <div id="status" class="status" hidden></div>
+  </div>
+
+  <script src="../lib/api.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

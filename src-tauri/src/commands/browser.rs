@@ -16,9 +16,7 @@ pub struct UrlInfo {
     pub favicon_url: String,
 }
 
-/// URLからタイトル・説明・faviconを取得
-#[tauri::command]
-pub fn fetch_url_info(url: String) -> Result<UrlInfo, String> {
+pub fn fetch_url_info_impl(url: String) -> Result<UrlInfo, String> {
     let domain = extract_domain(&url);
     let base_url = extract_base_url(&url);
 
@@ -38,6 +36,12 @@ pub fn fetch_url_info(url: String) -> Result<UrlInfo, String> {
         description,
         favicon_url,
     })
+}
+
+/// URLからタイトル・説明・faviconを取得
+#[tauri::command]
+pub fn fetch_url_info(url: String) -> Result<UrlInfo, String> {
+    fetch_url_info_impl(url)
 }
 
 /// HTTPクライアントを構築

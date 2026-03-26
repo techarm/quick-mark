@@ -1,6 +1,6 @@
-use rusqlite::params;
+use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::State;
 
 use crate::commands::browser::extract_domain;
@@ -89,7 +89,7 @@ fn row_to_link(row: &rusqlite::Row) -> rusqlite::Result<Link> {
 
 #[tauri::command]
 pub fn get_links(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     category_id: Option<String>,
     filter: Option<String>,
 ) -> Result<Vec<Link>, String> {
@@ -145,19 +145,13 @@ pub fn get_links(
     Ok(links)
 }
 
-#[tauri::command]
-pub fn create_link(
-    db: State<'_, Mutex<AppDb>>,
-    input: CreateLinkInput,
-) -> Result<Link, String> {
+pub fn create_link_impl(conn: &Connection, input: CreateLinkInput) -> Result<Link, String> {
     validate_url(&input.url)?;
     validate_length("タイトル", &input.title, 500)?;
     if let Some(ref desc) = input.description {
         validate_length("説明", desc, 2000)?;
     }
 
-    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
-    let conn = &db.conn;
     let id = uuid::Uuid::new_v4().to_string();
 
     conn.execute(
@@ -188,8 +182,17 @@ pub fn create_link(
 }
 
 #[tauri::command]
+pub fn create_link(
+    db: State<'_, Arc<Mutex<AppDb>>>,
+    input: CreateLinkInput,
+) -> Result<Link, String> {
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
+    create_link_impl(&db.conn, input)
+}
+
+#[tauri::command]
 pub fn update_link(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     input: UpdateLinkInput,
 ) -> Result<Link, String> {
     if let Some(ref url) = input.url {
@@ -253,7 +256,7 @@ pub fn update_link(
 
 #[tauri::command]
 pub fn delete_link(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     id: String,
 ) -> Result<(), String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
@@ -265,7 +268,7 @@ pub fn delete_link(
 
 #[tauri::command]
 pub fn search_links(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     query: String,
 ) -> Result<Vec<Link>, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
@@ -359,7 +362,7 @@ pub fn search_links(
 
 #[tauri::command]
 pub fn open_link(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     id: String,
 ) -> Result<String, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
@@ -383,7 +386,7 @@ pub fn open_link(
 
 #[tauri::command]
 pub fn cleanup_expired_links(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
 ) -> Result<i64, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
@@ -402,7 +405,7 @@ pub fn cleanup_expired_links(
 /// favicon_urlが空のリンクIDリストを取得
 #[tauri::command]
 pub fn get_links_without_favicon(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
 ) -> Result<Vec<(String, String)>, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
@@ -423,7 +426,7 @@ pub fn get_links_without_favicon(
 /// 1件のリンクのfaviconを取得して更新
 #[tauri::command]
 pub fn refresh_single_favicon(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     id: String,
     favicon_url: String,
 ) -> Result<(), String> {
@@ -442,7 +445,7 @@ pub fn refresh_single_favicon(
 /// 後方互換: 簡易版（Google Favicon APIのみ）
 #[tauri::command]
 pub fn refresh_favicons(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
 ) -> Result<i64, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
@@ -475,7 +478,7 @@ pub fn refresh_favicons(
 /// 複数リンクを別カテゴリに一括移動
 #[tauri::command]
 pub fn move_links_to_category(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     link_ids: Vec<String>,
     category_id: Option<String>,
 ) -> Result<i64, String> {
@@ -509,7 +512,7 @@ pub fn move_links_to_category(
 /// 複数リンクを一括削除
 #[tauri::command]
 pub fn bulk_delete_links(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     link_ids: Vec<String>,
 ) -> Result<i64, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
@@ -548,15 +551,7 @@ pub struct DuplicateInfo {
     pub category_name: Option<String>,
 }
 
-/// 単一URLの重複チェック
-#[tauri::command]
-pub fn check_duplicate_url(
-    db: State<'_, Mutex<AppDb>>,
-    url: String,
-) -> Result<Option<DuplicateInfo>, String> {
-    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
-    let conn = &db.conn;
-
+pub fn check_duplicate_url_impl(conn: &Connection, url: &str) -> Result<Option<DuplicateInfo>, String> {
     let result = conn.query_row(
         "SELECT l.id, l.url, l.title, l.category_id, c.name
          FROM links l
@@ -582,10 +577,20 @@ pub fn check_duplicate_url(
     }
 }
 
+/// 単一URLの重複チェック
+#[tauri::command]
+pub fn check_duplicate_url(
+    db: State<'_, Arc<Mutex<AppDb>>>,
+    url: String,
+) -> Result<Option<DuplicateInfo>, String> {
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
+    check_duplicate_url_impl(&db.conn, &url)
+}
+
 /// 複数URLの一括重複チェック（インポート用）
 #[tauri::command]
 pub fn check_duplicate_urls(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     urls: Vec<String>,
 ) -> Result<Vec<String>, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;

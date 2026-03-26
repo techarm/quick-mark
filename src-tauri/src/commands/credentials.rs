@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
@@ -56,7 +56,7 @@ fn validate_length(field: &str, value: &str, max: usize) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn get_credentials(db: State<'_, Mutex<AppDb>>) -> Result<Vec<Credential>, String> {
+pub fn get_credentials(db: State<'_, Arc<Mutex<AppDb>>>) -> Result<Vec<Credential>, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
@@ -75,7 +75,7 @@ pub fn get_credentials(db: State<'_, Mutex<AppDb>>) -> Result<Vec<Credential>, S
 
 #[tauri::command]
 pub fn create_credential(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     input: CreateCredentialInput,
 ) -> Result<Credential, String> {
     validate_length("サービス名", &input.name, 200)?;
@@ -115,7 +115,7 @@ pub fn create_credential(
 
 #[tauri::command]
 pub fn update_credential(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     input: UpdateCredentialInput,
 ) -> Result<Credential, String> {
     if let Some(ref name) = input.name {
@@ -184,7 +184,7 @@ pub fn update_credential(
 }
 
 #[tauri::command]
-pub fn delete_credential(db: State<'_, Mutex<AppDb>>, id: String) -> Result<(), String> {
+pub fn delete_credential(db: State<'_, Arc<Mutex<AppDb>>>, id: String) -> Result<(), String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
     conn.execute("DELETE FROM credentials WHERE id = ?1", params![id])
@@ -194,7 +194,7 @@ pub fn delete_credential(db: State<'_, Mutex<AppDb>>, id: String) -> Result<(), 
 
 #[tauri::command]
 pub fn search_credentials(
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     query: String,
 ) -> Result<Vec<Credential>, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
@@ -235,7 +235,7 @@ pub fn search_credentials(
 #[tauri::command]
 pub fn copy_credential_password(
     app: AppHandle,
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     id: String,
 ) -> Result<(), String> {
     let password = {
@@ -282,7 +282,7 @@ pub fn copy_credential_password(
 #[tauri::command]
 pub fn copy_credential_field(
     app: AppHandle,
-    db: State<'_, Mutex<AppDb>>,
+    db: State<'_, Arc<Mutex<AppDb>>>,
     id: String,
     field: String,
 ) -> Result<(), String> {

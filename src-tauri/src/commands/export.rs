@@ -1,6 +1,6 @@
 use rusqlite::params;
 use serde::Serialize;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::State;
 
 use crate::db::AppDb;
@@ -47,7 +47,7 @@ pub struct ExportData {
 }
 
 #[tauri::command]
-pub fn export_data(db: State<'_, Mutex<AppDb>>) -> Result<String, String> {
+pub fn export_data(db: State<'_, Arc<Mutex<AppDb>>>) -> Result<String, String> {
     let db = db.lock().map_err(|e| format!("Export operation failed: {}", e))?;
     let conn = &db.conn;
 
