@@ -13,9 +13,12 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
 import type {
   Category,
   CreateCategoryInput,
+  CreateCredentialInput,
   CreateLinkInput,
+  Credential,
   Link,
   UpdateCategoryInput,
+  UpdateCredentialInput,
   UpdateLinkInput,
 } from './types';
 
@@ -159,4 +162,38 @@ export async function checkDuplicateUrl(url: string): Promise<DuplicateInfo | nu
 
 export async function checkDuplicateUrls(urls: string[]): Promise<string[]> {
   return invoke('check_duplicate_urls', { urls });
+}
+
+// === 認証情報 ===
+
+export async function getCredentials(): Promise<Credential[]> {
+  return invoke('get_credentials');
+}
+
+export async function createCredential(input: CreateCredentialInput): Promise<Credential> {
+  return invoke('create_credential', { input });
+}
+
+export async function updateCredential(input: UpdateCredentialInput): Promise<Credential> {
+  return invoke('update_credential', { input });
+}
+
+export async function deleteCredential(id: string): Promise<void> {
+  return invoke('delete_credential', { id });
+}
+
+export async function searchCredentials(query: string): Promise<Credential[]> {
+  return invoke('search_credentials', { query });
+}
+
+export async function copyCredentialPassword(id: string): Promise<void> {
+  return invoke('copy_credential_password', { id });
+}
+
+export async function copyCredentialField(id: string, field: string): Promise<void> {
+  return invoke('copy_credential_field', { id, field });
+}
+
+export async function clearClipboard(): Promise<void> {
+  return invoke('clear_clipboard');
 }

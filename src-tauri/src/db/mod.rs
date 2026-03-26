@@ -81,6 +81,16 @@ fn run_migrations(conn: &Connection) -> Result<()> {
         CREATE INDEX IF NOT EXISTS idx_categories_name ON categories(name);
         CREATE INDEX IF NOT EXISTS idx_links_url ON links(url);
         CREATE INDEX IF NOT EXISTS idx_links_created ON links(created_at DESC);
+
+        CREATE TABLE IF NOT EXISTS credentials (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            username TEXT NOT NULL DEFAULT '',
+            password_encoded TEXT NOT NULL DEFAULT '',
+            note TEXT DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
         ",
     )?;
 

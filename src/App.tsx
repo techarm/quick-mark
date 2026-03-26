@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { toast, Toaster } from 'sonner';
-import { safeOpenUrl } from './lib/utils';
+import { Toaster, toast } from 'sonner';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ImportDialog } from './components/ImportDialog';
 import { AddLinkDialog } from './components/main/AddLinkDialog';
 import { BulkActionBar } from './components/main/BulkActionBar';
 import { CategoryDialog } from './components/main/CategoryDialog';
+import { CredentialDialog } from './components/main/CredentialDialog';
+import { CredentialList } from './components/main/CredentialList';
 import { EditLinkDialog } from './components/main/EditLinkDialog';
 import { LinkDetail } from './components/main/LinkDetail';
 import { LinkList } from './components/main/LinkList';
@@ -16,10 +17,13 @@ import * as commands from './lib/commands';
 import type {
   Category,
   CreateCategoryInput,
+  CreateCredentialInput,
   CreateLinkInput,
+  Credential,
   Link,
   UpdateLinkInput,
 } from './lib/types';
+import { safeOpenUrl } from './lib/utils';
 import { useUIStore } from './stores/ui.store';
 
 // 独立検索ウィンドウのトグル（tauri.conf.jsonで事前定義済み）
@@ -44,6 +48,7 @@ async function toggleSearchWindow() {
 function App() {
   const [links, setLinks] = useState<Link[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [credentials, setCredentials] = useState<Credential[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -55,6 +60,10 @@ function App() {
   // カテゴリ CRUD
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+
+  // 認証情報 CRUD
+  const [credentialDialogOpen, setCredentialDialogOpen] = useState(false);
+  const [editingCredential, setEditingCredential] = useState<Credential | null>(null);
 
   // 確認ダイアログ
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -75,6 +84,8 @@ function App() {
     clearSelection,
   } = useUIStore();
 
+  const isCredentialsView = activeFilter === 'credentials' && !activeCategoryId;
+
   // データの読み込み
   const loadLinks = useCallback(async () => {
     try {
@@ -85,7 +96,10 @@ function App() {
         const results = await commands.getLinks(activeCategoryId);
         setLinks(results);
       } else {
-        const filter = activeFilter === 'all' ? undefined : (activeFilter ?? undefined);
+        const filter =
+          activeFilter === 'all' || activeFilter === 'credentials'
+            ? undefined
+            : (activeFilter ?? undefined);
         const results = await commands.getLinks(undefined, filter);
         setLinks(results);
       }
@@ -106,6 +120,16 @@ function App() {
     }
   }, []);
 
+  const loadCredentials = useCallback(async () => {
+    try {
+      const creds = await commands.getCredentials();
+      setCredentials(creds);
+    } catch (err) {
+      console.error('Failed to load credentials:', err);
+      toast.error('認証情報の読み込みに失敗しました');
+    }
+  }, []);
+
   useEffect(() => {
     loadLinks();
   }, [loadLinks]);
@@ -113,6 +137,39 @@ function App() {
   useEffect(() => {
     loadCategories();
   }, [loadCategories]);
+
+  useEffect(() => {
+    loadCredentials();
+  }, [loadCredentials]);
+
+  // Tauriイベントリスナー（認証情報コピー通知）
+  useEffect(() => {
+    let unlisten1: (() => void) | undefined;
+    let unlisten2: (() => void) | undefined;
+
+    async function setupListeners() {
+      try {
+        const { listen } = await import('@tauri-apps/api/event');
+        unlisten1 = await listen('credential:password-copied', () => {
+          toast.success('パスワードをコピーしました', {
+            description: '30秒後にクリップボードをクリアします',
+          });
+        });
+        unlisten2 = await listen('credential:clipboard-cleared', () => {
+          toast.info('クリップボードをクリアしました');
+        });
+      } catch {
+        // ブラウザ環境では無視
+      }
+    }
+
+    setupListeners();
+
+    return () => {
+      unlisten1?.();
+      unlisten2?.();
+    };
+  }, []);
 
   // バックグラウンドでfaviconを取得（同一ドメインはキャッシュ活用）
   const refreshFaviconsBackground = useCallback(async () => {
@@ -163,7 +220,6 @@ function App() {
     refreshFaviconsBackground();
   }, [refreshFaviconsBackground]);
 
-  // OS-level グローバルショートカット（Cmd+Shift+Space）
   // OS-level グローバルショートカット（Cmd+Shift+Space）→ 独立検索ウィンドウ
   useEffect(() => {
     let registered = false;
@@ -468,6 +524,80 @@ function App() {
     [loadCategories],
   );
 
+  // === 認証情報ハンドラ ===
+
+  const handleAddCredential = useCallback(() => {
+    setEditingCredential(null);
+    setCredentialDialogOpen(true);
+  }, []);
+
+  const handleEditCredential = useCallback((credential: Credential) => {
+    setEditingCredential(credential);
+    setCredentialDialogOpen(true);
+  }, []);
+
+  const handleDeleteCredential = useCallback(
+    (credential: Credential) => {
+      setConfirmDialog({
+        open: true,
+        title: '認証情報の削除',
+        message: `「${credential.name}」の認証情報を削除しますか？`,
+        onConfirm: async () => {
+          try {
+            await commands.deleteCredential(credential.id);
+            loadCredentials();
+            toast.success('認証情報を削除しました');
+          } catch (err) {
+            console.error('Failed to delete credential:', err);
+            toast.error('認証情報の削除に失敗しました');
+          }
+        },
+      });
+    },
+    [loadCredentials],
+  );
+
+  const handleCredentialSubmit = useCallback(
+    async (input: CreateCredentialInput & { id?: string }) => {
+      try {
+        if (input.id) {
+          await commands.updateCredential({
+            id: input.id,
+            name: input.name,
+            username: input.username,
+            password: input.password || undefined,
+            note: input.note,
+          });
+          toast.success('認証情報を更新しました');
+        } else {
+          await commands.createCredential(input);
+          toast.success('認証情報を追加しました');
+        }
+        loadCredentials();
+      } catch (err) {
+        console.error('Failed to save credential:', err);
+        toast.error('認証情報の保存に失敗しました');
+      }
+    },
+    [loadCredentials],
+  );
+
+  const handleCopyCredentialField = useCallback(
+    async (id: string, field: 'username' | 'password') => {
+      try {
+        await commands.copyCredentialField(id, field);
+        if (field === 'username') {
+          toast.success('ユーザー名をコピーしました');
+        }
+        // パスワードの場合はTauriイベントリスナーで通知
+      } catch (err) {
+        console.error('Failed to copy credential field:', err);
+        toast.error('コピーに失敗しました');
+      }
+    },
+    [],
+  );
+
   // リンクカウントを計算
   const now = new Date();
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -475,10 +605,10 @@ function App() {
     all: links.length,
     recent: links.filter((l) => new Date(l.created_at) >= sevenDaysAgo).length,
     temporary: links.filter((l) => l.is_temporary).length,
-    expired: links.filter(
-      (l) => l.is_temporary && l.expires_at && new Date(l.expires_at) < now,
-    ).length,
+    expired: links.filter((l) => l.is_temporary && l.expires_at && new Date(l.expires_at) < now)
+      .length,
     pinned: links.filter((l) => l.is_pinned).length,
+    credentials: credentials.length,
   };
 
   const selectedLink = links.find((l) => l.id === selectedLinkId) ?? null;
@@ -512,34 +642,78 @@ function App() {
           className="flex flex-1 flex-col overflow-hidden"
           style={{ background: 'var(--bg-base)' }}
         >
-          {selectedLinkIds.size > 0 ? (
-            <BulkActionBar
-              selectedCount={selectedLinkIds.size}
-              categories={categories}
-              onMove={handleBulkMove}
-              onDelete={handleBulkDelete}
-              onClear={clearSelection}
-            />
+          {isCredentialsView ? (
+            <>
+              {/* 認証情報ツールバー */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 20px',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  minHeight: 52,
+                }}
+              >
+                <h2
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: 'var(--text-primary)',
+                    margin: 0,
+                  }}
+                >
+                  認証情報
+                </h2>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ height: 32, fontSize: 12, gap: 6 }}
+                  onClick={handleAddCredential}
+                >
+                  追加
+                </button>
+              </div>
+              <CredentialList
+                credentials={credentials}
+                onAdd={handleAddCredential}
+                onEdit={handleEditCredential}
+                onDelete={handleDeleteCredential}
+                onCopyField={handleCopyCredentialField}
+              />
+            </>
           ) : (
-            <Toolbar
-              onAddLink={() => setAddDialogOpen(true)}
-              onImport={() => setImportDialogOpen(true)}
-              onExport={handleExport}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-            />
+            <>
+              {selectedLinkIds.size > 0 ? (
+                <BulkActionBar
+                  selectedCount={selectedLinkIds.size}
+                  categories={categories}
+                  onMove={handleBulkMove}
+                  onDelete={handleBulkDelete}
+                  onClear={clearSelection}
+                />
+              ) : (
+                <Toolbar
+                  onAddLink={() => setAddDialogOpen(true)}
+                  onImport={() => setImportDialogOpen(true)}
+                  onExport={handleExport}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                />
+              )}
+              <LinkList
+                links={links}
+                onOpen={handleOpenLink}
+                onEdit={handleEditLink}
+                onDelete={handleDeleteLink}
+                onTogglePin={handleTogglePin}
+              />
+            </>
           )}
-          <LinkList
-            links={links}
-            onOpen={handleOpenLink}
-            onEdit={handleEditLink}
-            onDelete={handleDeleteLink}
-            onTogglePin={handleTogglePin}
-          />
         </main>
 
         {/* 詳細パネル */}
-        {detailPanelOpen && (
+        {detailPanelOpen && !isCredentialsView && (
           <LinkDetail
             link={selectedLink}
             onOpen={handleOpenLink}
@@ -575,6 +749,14 @@ function App() {
         category={editingCategory}
         categories={categories}
         onSubmit={handleCategorySubmit}
+      />
+
+      {/* 認証情報ダイアログ */}
+      <CredentialDialog
+        open={credentialDialogOpen}
+        onOpenChange={setCredentialDialogOpen}
+        credential={editingCredential}
+        onSubmit={handleCredentialSubmit}
       />
 
       {/* インポートダイアログ */}

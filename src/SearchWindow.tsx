@@ -1,8 +1,8 @@
 import { Command } from 'cmdk';
-import { ExternalLink, Pin, Search, Timer } from 'lucide-react';
+import { Check, ExternalLink, KeyRound, Pin, Search, Timer } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as commands from './lib/commands';
-import type { Link } from './lib/types';
+import type { Credential, Link } from './lib/types';
 import { safeOpenUrl } from './lib/utils';
 
 const ITEM_HEIGHT = 52;
@@ -11,6 +11,8 @@ const FOOTER_HEIGHT = 40;
 const EMPTY_HEIGHT = 80;
 const MAX_VISIBLE_ITEMS = 7;
 const PADDING = 16; // リスト上下パディング
+
+type SearchMode = 'links' | 'credentials';
 
 async function hideWindow() {
   try {
@@ -23,16 +25,29 @@ async function hideWindow() {
 
 export function SearchWindow() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Link[]>([]);
+  const [linkResults, setLinkResults] = useState<Link[]>([]);
+  const [credentialResults, setCredentialResults] = useState<Credential[]>([]);
   const [loading, setLoading] = useState(false);
+  const [copySuccess, setCopySuccess] = useState<{
+    name: string;
+    field: 'password' | 'username';
+  } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const doSearch = useCallback(async (q: string) => {
+  const searchMode: SearchMode = query.startsWith('@') ? 'credentials' : 'links';
+  const effectiveQuery = searchMode === 'credentials' ? query.slice(1) : query;
+
+  const doSearch = useCallback(async (q: string, mode: SearchMode) => {
     setLoading(true);
     try {
-      const links = await commands.searchLinks(q);
-      setResults(links);
+      if (mode === 'credentials') {
+        const creds = await commands.searchCredentials(q);
+        setCredentialResults(creds);
+      } else {
+        const links = await commands.searchLinks(q);
+        setLinkResults(links);
+      }
     } catch (err) {
       console.error('Search failed:', err);
     } finally {
@@ -42,18 +57,18 @@ export function SearchWindow() {
 
   // 初回マウント時に検索 + フォーカス
   useEffect(() => {
-    doSearch('');
+    doSearch('', 'links');
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [doSearch]);
 
   // デバウンス検索
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => doSearch(query), 80);
+    debounceRef.current = setTimeout(() => doSearch(effectiveQuery, searchMode), 80);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, doSearch]);
+  }, [effectiveQuery, searchMode, doSearch]);
 
   // ウィンドウ表示時にクエリをクリア・テーマ同期・フォーカス復元
   useEffect(() => {
@@ -63,13 +78,16 @@ export function SearchWindow() {
       if (theme === 'light' || theme === 'dark') {
         document.documentElement.dataset.theme = theme;
       }
+      setCopySuccess(null);
       setQuery('');
-      doSearch('');
+      doSearch('', 'links');
       setTimeout(() => inputRef.current?.focus(), 50);
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [doSearch]);
+
+  const results = searchMode === 'credentials' ? credentialResults : linkResults;
 
   // 結果件数に応じてウィンドウサイズを調整
   const listHeight = useMemo(() => {
@@ -103,6 +121,34 @@ export function SearchWindow() {
     }
   }, []);
 
+  // 認証情報のパスワードをコピー
+  const handleCopyPassword = useCallback(async (credential: Credential) => {
+    try {
+      await commands.copyCredentialPassword(credential.id);
+      setCopySuccess({ name: credential.name, field: 'password' });
+      setTimeout(async () => {
+        setCopySuccess(null);
+        await hideWindow();
+      }, 1200);
+    } catch (err) {
+      console.error('Failed to copy password:', err);
+    }
+  }, []);
+
+  // 認証情報のユーザー名をコピー
+  const handleCopyUsername = useCallback(async (credential: Credential) => {
+    try {
+      await commands.copyCredentialField(credential.id, 'username');
+      setCopySuccess({ name: credential.name, field: 'username' });
+      setTimeout(async () => {
+        setCopySuccess(null);
+        await hideWindow();
+      }, 1200);
+    } catch (err) {
+      console.error('Failed to copy username:', err);
+    }
+  }, []);
+
   // キーボード
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -113,9 +159,81 @@ export function SearchWindow() {
           hideWindow();
         }
       }
+      // Tab: 認証情報モードでユーザー名をコピー
+      if (e.key === 'Tab' && searchMode === 'credentials' && credentialResults.length > 0) {
+        e.preventDefault();
+        const selected = document.querySelector<HTMLElement>('[cmdk-item][aria-selected="true"]');
+        if (selected) {
+          const selectedValue = selected.getAttribute('data-value');
+          const cred = credentialResults.find((c) => c.id === selectedValue);
+          if (cred) {
+            handleCopyUsername(cred);
+          }
+        }
+      }
     },
-    [query],
+    [query, searchMode, credentialResults, handleCopyUsername],
   );
+
+  // コピー成功時のウィンドウサイズ
+  useEffect(() => {
+    if (!copySuccess) return;
+    (async () => {
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        const win = getCurrentWindow();
+        await win.setSize(
+          new (await import('@tauri-apps/api/dpi')).LogicalSize(640, HEADER_HEIGHT + 100),
+        );
+      } catch {
+        // ブラウザ環境では無視
+      }
+    })();
+  }, [copySuccess]);
+
+  // コピー成功表示
+  if (copySuccess) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--bg-overlay)',
+          borderRadius: 10,
+          overflow: 'hidden',
+          border: '1px solid var(--border-medium)',
+          height: HEADER_HEIGHT + 100,
+          gap: 10,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            background: 'rgba(46, 213, 115, 0.12)',
+          }}
+        >
+          <Check size={22} style={{ color: 'var(--accent-success, #2ed573)' }} />
+        </div>
+        <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>
+          {copySuccess.name} の{copySuccess.field === 'password' ? 'パスワード' : 'ユーザー名'}
+          をコピーしました
+        </span>
+        {copySuccess.field === 'password' && (
+          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+            30秒後にクリップボードをクリアします
+          </span>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -140,12 +258,16 @@ export function SearchWindow() {
             borderBottom: '1px solid var(--border-subtle)',
           }}
         >
-          <Search size={18} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+          {searchMode === 'credentials' ? (
+            <KeyRound size={18} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+          ) : (
+            <Search size={18} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+          )}
           <Command.Input
             ref={inputRef}
             value={query}
             onValueChange={setQuery}
-            placeholder="リンクを検索..."
+            placeholder="検索..."
             style={{
               flex: 1,
               background: 'transparent',
@@ -189,13 +311,27 @@ export function SearchWindow() {
                 color: 'var(--text-tertiary)',
               }}
             >
-              {query ? '該当するリンクが見つかりません' : 'リンクがありません'}
+              {searchMode === 'credentials'
+                ? effectiveQuery
+                  ? '該当する認証情報が見つかりません'
+                  : '認証情報がありません'
+                : query
+                  ? '該当するリンクが見つかりません'
+                  : 'リンクがありません'}
             </div>
           </Command.Empty>
 
-          {results.map((link) => (
-            <SearchResultItem key={link.id} link={link} onSelect={() => handleOpenLink(link)} />
-          ))}
+          {searchMode === 'credentials'
+            ? credentialResults.map((cred) => (
+                <CredentialResultItem
+                  key={cred.id}
+                  credential={cred}
+                  onSelect={() => handleCopyPassword(cred)}
+                />
+              ))
+            : linkResults.map((link) => (
+                <SearchResultItem key={link.id} link={link} onSelect={() => handleOpenLink(link)} />
+              ))}
         </Command.List>
 
         {/* フッター */}
@@ -231,13 +367,39 @@ export function SearchWindow() {
               }}
             >
               <span className="kbd">Enter</span>
-              開く
+              {searchMode === 'credentials' ? 'PW コピー' : '開く'}
             </span>
+            {searchMode === 'credentials' ? (
+              <span
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 11,
+                  color: 'var(--text-tertiary)',
+                }}
+              >
+                <span className="kbd">Tab</span>
+                ID コピー
+              </span>
+            ) : (
+              <span
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 11,
+                  color: 'var(--text-tertiary)',
+                }}
+              >
+                <span className="kbd">@</span>
+                認証情報
+              </span>
+            )}
           </div>
           <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{results.length}件</span>
         </div>
       </Command>
-
     </div>
   );
 }
@@ -339,6 +501,99 @@ function SearchResultItem({ link, onSelect }: { link: Link; onSelect: () => void
           {link.visit_count}回
         </span>
       )}
+    </Command.Item>
+  );
+}
+
+function CredentialResultItem({
+  credential,
+  onSelect,
+}: {
+  credential: Credential;
+  onSelect: () => void;
+}) {
+  return (
+    <Command.Item
+      value={credential.id}
+      onSelect={onSelect}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 12px',
+        borderRadius: 'var(--radius-md)',
+        cursor: 'pointer',
+        transition: 'background 75ms ease',
+      }}
+      className="aria-selected:bg-[var(--bg-active)]"
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 26,
+          height: 26,
+          borderRadius: 6,
+          background: 'var(--accent-subtle)',
+          flexShrink: 0,
+        }}
+      >
+        <KeyRound size={14} style={{ color: 'var(--accent-primary)' }} />
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: 'var(--text-primary)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {credential.name}
+          </span>
+        </div>
+        <span
+          className="url-text"
+          style={{
+            display: 'block',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {credential.username}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+        <span
+          style={{
+            padding: '2px 8px',
+            borderRadius: 99,
+            fontSize: 11,
+            background: 'var(--accent-subtle)',
+            color: 'var(--accent-primary)',
+          }}
+        >
+          Enter PW
+        </span>
+        <span
+          style={{
+            padding: '2px 8px',
+            borderRadius: 99,
+            fontSize: 11,
+            background: 'var(--bg-elevated)',
+            color: 'var(--text-tertiary)',
+          }}
+        >
+          Tab ID
+        </span>
+      </div>
     </Command.Item>
   );
 }

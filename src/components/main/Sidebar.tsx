@@ -4,6 +4,7 @@ import {
   FolderOpen,
   Globe,
   Hourglass,
+  KeyRound,
   Pencil,
   Pin,
   Plus,
@@ -21,6 +22,7 @@ interface SidebarProps {
     temporary: number;
     expired: number;
     pinned: number;
+    credentials: number;
   };
   onAddCategory?: () => void;
   onEditCategory?: (category: Category) => void;
@@ -33,6 +35,7 @@ const smartFilters: { id: SmartFilter; label: string; icon: typeof Globe }[] = [
   { id: 'temporary', label: '一時リンク', icon: Timer },
   { id: 'expired', label: '期限切れ', icon: Hourglass },
   { id: 'pinned', label: 'ピン留め', icon: Pin },
+  { id: 'credentials', label: '認証情報', icon: KeyRound },
 ];
 
 export function Sidebar({
@@ -56,6 +59,8 @@ export function Sidebar({
         return linkCounts.expired;
       case 'pinned':
         return linkCounts.pinned;
+      case 'credentials':
+        return linkCounts.credentials;
       default:
         return 0;
     }

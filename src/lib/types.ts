@@ -70,4 +70,29 @@ export interface UpdateCategoryInput {
   position?: number;
 }
 
-export type SmartFilter = 'all' | 'recent' | 'temporary' | 'expired' | 'pinned';
+export type SmartFilter = 'all' | 'recent' | 'temporary' | 'expired' | 'pinned' | 'credentials';
+
+export interface Credential {
+  id: string;
+  name: string;
+  username: string;
+  password_encoded: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCredentialInput {
+  name: string;
+  username: string;
+  password: string;
+  note?: string;
+}
+
+export interface UpdateCredentialInput {
+  id: string;
+  name?: string;
+  username?: string;
+  password?: string;
+  note?: string;
+}

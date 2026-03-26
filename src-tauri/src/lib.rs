@@ -6,6 +6,7 @@ use tauri::{Manager, RunEvent, WindowEvent};
 
 use commands::browser::*;
 use commands::categories::*;
+use commands::credentials::*;
 use commands::export::*;
 use commands::import::*;
 use commands::links::*;
@@ -18,6 +19,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {
             let db_path = db::get_db_path(&app.handle())
                 .map_err(|e| Box::<dyn std::error::Error>::from(e))?;
@@ -58,6 +60,15 @@ pub fn run() {
             // 重複チェック
             check_duplicate_url,
             check_duplicate_urls,
+            // 認証情報
+            get_credentials,
+            create_credential,
+            update_credential,
+            delete_credential,
+            search_credentials,
+            copy_credential_password,
+            copy_credential_field,
+            clear_clipboard,
         ])
         .on_window_event(|window, event| {
             match event {
