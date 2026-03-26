@@ -55,8 +55,9 @@ pub fn run() {
 
             // HTTPサーバーをバックグラウンドスレッドで起動
             let server_db = Arc::clone(&db);
+            let server_app_handle = app.handle().clone();
             std::thread::spawn(move || {
-                server::start_server(server_db, token, app_data_dir);
+                server::start_server(server_db, token, app_data_dir, server_app_handle);
             });
 
             app.manage(db);

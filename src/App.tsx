@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Toaster, toast } from 'sonner';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { ImportDialog } from './components/ImportDialog';
@@ -110,6 +110,11 @@ function App() {
     }
   }, [searchQuery, activeFilter, activeCategoryId]);
 
+  const loadLinksRef = useRef(loadLinks);
+  useEffect(() => {
+    loadLinksRef.current = loadLinks;
+  }, [loadLinks]);
+
   const loadCategories = useCallback(async () => {
     try {
       const cats = await commands.getCategories();
@@ -144,20 +149,30 @@ function App() {
 
   // Tauriイベントリスナー（認証情報コピー通知）
   useEffect(() => {
+    let cancelled = false;
     let unlisten1: (() => void) | undefined;
     let unlisten2: (() => void) | undefined;
+    let unlisten3: (() => void) | undefined;
 
     async function setupListeners() {
       try {
         const { listen } = await import('@tauri-apps/api/event');
+        if (cancelled) return;
         unlisten1 = await listen('credential:password-copied', () => {
           toast.success('パスワードをコピーしました', {
             description: '30秒後にクリップボードをクリアします',
           });
         });
+        if (cancelled) { unlisten1(); return; }
         unlisten2 = await listen('credential:clipboard-cleared', () => {
           toast.info('クリップボードをクリアしました');
         });
+        if (cancelled) { unlisten2(); return; }
+        unlisten3 = await listen('links:created-from-extension', () => {
+          loadLinksRef.current();
+          toast.success('ブラウザ拡張機能からリンクを保存しました');
+        });
+        if (cancelled) { unlisten3(); return; }
       } catch {
         // ブラウザ環境では無視
       }
@@ -166,8 +181,10 @@ function App() {
     setupListeners();
 
     return () => {
+      cancelled = true;
       unlisten1?.();
       unlisten2?.();
+      unlisten3?.();
     };
   }, []);
 

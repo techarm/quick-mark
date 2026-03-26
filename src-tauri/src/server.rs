@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter};
 use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 
 use crate::commands::browser::fetch_url_info_impl;
@@ -87,7 +88,7 @@ fn check_auth(request: &Request, token: &str) -> bool {
         .unwrap_or(false)
 }
 
-pub fn start_server(db: Arc<Mutex<AppDb>>, token: String, app_data_dir: PathBuf) {
+pub fn start_server(db: Arc<Mutex<AppDb>>, token: String, app_data_dir: PathBuf, app_handle: AppHandle) {
     let server = try_bind_server();
     let server = match server {
         Some(s) => s,
@@ -127,7 +128,7 @@ pub fn start_server(db: Arc<Mutex<AppDb>>, token: String, app_data_dir: PathBuf)
                 if !check_auth(&request, &token) {
                     json_response(401, error_response("Unauthorized"))
                 } else {
-                    handle_create_link(&mut request, &db)
+                    handle_create_link(&mut request, &db, &app_handle)
                 }
             }
 
@@ -167,6 +168,7 @@ fn try_bind_server() -> Option<Server> {
 fn handle_create_link(
     request: &mut Request,
     db: &Arc<Mutex<AppDb>>,
+    app_handle: &AppHandle,
 ) -> Response<std::io::Cursor<Vec<u8>>> {
     let input: CreateLinkInput = match read_json_body(request) {
         Ok(v) => v,
@@ -179,7 +181,10 @@ fn handle_create_link(
     };
 
     match create_link_impl(&db.conn, input) {
-        Ok(link) => json_response(200, success_response(link)),
+        Ok(link) => {
+            let _ = app_handle.emit("links:created-from-extension", ());
+            json_response(200, success_response(link))
+        }
         Err(e) => json_response(400, error_response(&e)),
     }
 }
