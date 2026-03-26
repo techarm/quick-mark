@@ -1,4 +1,4 @@
-use rusqlite::params;
+use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use tauri::State;
@@ -55,13 +55,7 @@ fn row_to_category(row: &rusqlite::Row) -> rusqlite::Result<Category> {
     })
 }
 
-#[tauri::command]
-pub fn get_categories(
-    db: State<'_, Arc<Mutex<AppDb>>>,
-) -> Result<Vec<Category>, String> {
-    let db = db.lock().map_err(|e| format!("Category operation failed: {}", e))?;
-    let conn = &db.conn;
-
+pub fn get_categories_impl(conn: &Connection) -> Result<Vec<Category>, String> {
     let mut stmt = conn
         .prepare(
             "SELECT c.*, COUNT(l.id) AS link_count
@@ -79,6 +73,14 @@ pub fn get_categories(
         .collect();
 
     Ok(categories)
+}
+
+#[tauri::command]
+pub fn get_categories(
+    db: State<'_, Arc<Mutex<AppDb>>>,
+) -> Result<Vec<Category>, String> {
+    let db = db.lock().map_err(|e| format!("Category operation failed: {}", e))?;
+    get_categories_impl(&db.conn)
 }
 
 #[tauri::command]

@@ -6,6 +6,7 @@ use tauri::{AppHandle, Emitter};
 use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 
 use crate::commands::browser::fetch_url_info_impl;
+use crate::commands::categories::get_categories_impl;
 use crate::commands::links::{check_duplicate_url_impl, create_link_impl, CreateLinkInput};
 use crate::db::AppDb;
 
@@ -148,6 +149,14 @@ pub fn start_server(db: Arc<Mutex<AppDb>>, token: String, app_data_dir: PathBuf,
                 }
             }
 
+            (Method::Get, "/api/categories") => {
+                if !check_auth(&request, &token) {
+                    json_response(401, error_response("Unauthorized"))
+                } else {
+                    handle_get_categories(&db)
+                }
+            }
+
             _ => json_response(404, error_response("Not found")),
         };
 
@@ -219,6 +228,20 @@ fn handle_fetch_info(
 
     match fetch_url_info_impl(body.url) {
         Ok(info) => json_response(200, success_response(info)),
+        Err(e) => json_response(500, error_response(&e)),
+    }
+}
+
+fn handle_get_categories(
+    db: &Arc<Mutex<AppDb>>,
+) -> Response<std::io::Cursor<Vec<u8>>> {
+    let db = match db.lock() {
+        Ok(db) => db,
+        Err(e) => return json_response(500, error_response(&format!("DB lock failed: {}", e))),
+    };
+
+    match get_categories_impl(&db.conn) {
+        Ok(categories) => json_response(200, success_response(categories)),
         Err(e) => json_response(500, error_response(&e)),
     }
 }

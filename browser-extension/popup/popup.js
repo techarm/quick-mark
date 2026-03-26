@@ -3,6 +3,7 @@ const $ = (id) => document.getElementById(id);
 let currentUrl = "";
 let currentTitle = "";
 let isDuplicate = false;
+let categoriesLoaded = false;
 
 async function init() {
   const config = await chrome.storage.local.get(["apiToken"]);
@@ -59,10 +60,25 @@ async function init() {
   // Event listeners
   $("save-btn").addEventListener("click", handleSave);
   $("save-expanded-btn").addEventListener("click", handleSaveExpanded);
-  $("expand-btn").addEventListener("click", () => {
+  $("expand-btn").addEventListener("click", async () => {
     $("simple-mode").hidden = true;
     $("expanded-mode").hidden = false;
     $("edit-title").focus();
+    if (!categoriesLoaded) {
+      categoriesLoaded = true;
+      try {
+        const categories = await apiRequest("GET", "/api/categories");
+        const select = $("edit-category");
+        for (const cat of categories) {
+          const opt = document.createElement("option");
+          opt.value = cat.id;
+          opt.textContent = cat.name;
+          select.appendChild(opt);
+        }
+      } catch {
+        // カテゴリ取得失敗は無視（「なし」のまま保存可能）
+      }
+    }
   });
   $("collapse-btn").addEventListener("click", () => {
     $("expanded-mode").hidden = true;
@@ -147,11 +163,13 @@ async function handleSaveExpanded() {
       // proceed without metadata
     }
 
+    const categoryId = $("edit-category").value || undefined;
     await apiRequest("POST", "/api/links", {
       url: currentUrl,
       title,
       description,
       favicon_url: faviconUrl,
+      category_id: categoryId,
     });
 
     $("expanded-mode").hidden = true;
