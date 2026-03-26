@@ -152,6 +152,18 @@ pub fn create_link_impl(conn: &Connection, input: CreateLinkInput) -> Result<Lin
         validate_length("説明", desc, 2000)?;
     }
 
+    // 重複URLチェック
+    let exists: bool = conn
+        .query_row(
+            "SELECT 1 FROM links WHERE url = ?1 LIMIT 1",
+            params![input.url],
+            |_| Ok(true),
+        )
+        .unwrap_or(false);
+    if exists {
+        return Err("このURLは既に登録されています".to_string());
+    }
+
     let id = uuid::Uuid::new_v4().to_string();
 
     conn.execute(

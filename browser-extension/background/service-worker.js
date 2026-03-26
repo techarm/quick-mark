@@ -73,6 +73,53 @@ async function apiRequest(method, path, body = null) {
   }
 }
 
+// === Icon & Menu state ===
+
+const ICON_DEFAULT = {
+  "16": chrome.runtime.getURL("icons/icon16.png"),
+  "32": chrome.runtime.getURL("icons/icon32.png"),
+  "48": chrome.runtime.getURL("icons/icon48.png"),
+  "128": chrome.runtime.getURL("icons/icon128.png"),
+};
+
+const ICON_SAVED = {
+  "16": chrome.runtime.getURL("icons/icon16_saved.png"),
+  "32": chrome.runtime.getURL("icons/icon32_saved.png"),
+  "48": chrome.runtime.getURL("icons/icon48_saved.png"),
+  "128": chrome.runtime.getURL("icons/icon128_saved.png"),
+};
+
+async function updateTabStatus(tabId, url) {
+  if (!url || !url.startsWith("http")) {
+    await chrome.action.setIcon({ path: ICON_DEFAULT, tabId });
+    chrome.contextMenus.update("save-to-quickmark", {
+      title: chrome.i18n.getMessage("contextMenuSave"),
+      enabled: true,
+    });
+    return;
+  }
+
+  try {
+    const result = await apiRequest("POST", "/api/check-duplicate", { url });
+    if (result) {
+      await chrome.action.setIcon({ path: ICON_SAVED, tabId });
+      chrome.contextMenus.update("save-to-quickmark", {
+        title: chrome.i18n.getMessage("contextMenuSaved"),
+        enabled: false,
+      });
+    } else {
+      await chrome.action.setIcon({ path: ICON_DEFAULT, tabId });
+      chrome.contextMenus.update("save-to-quickmark", {
+        title: chrome.i18n.getMessage("contextMenuSave"),
+        enabled: true,
+      });
+    }
+  } catch (e) {
+    console.error("[QuickMark] updateTabStatus error:", e);
+    await chrome.action.setIcon({ path: ICON_DEFAULT, tabId });
+  }
+}
+
 // === Context Menu ===
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -110,12 +157,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       favicon_url: faviconUrl,
     });
 
+    // Update icon to saved state
     if (tab?.id) {
-      chrome.action.setBadgeText({ text: "✓", tabId: tab.id });
-      chrome.action.setBadgeBackgroundColor({ color: "#22c55e", tabId: tab.id });
-      setTimeout(() => {
-        chrome.action.setBadgeText({ text: "", tabId: tab.id });
-      }, 3000);
+      updateTabStatus(tab.id, info.pageUrl);
     }
   } catch {
     if (tab?.id) {
@@ -128,23 +172,14 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 });
 
-// === Badge: show ★ for already-saved pages ===
+// === Auto-detect saved status on tab change ===
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status !== "complete" || !tab.url) return;
-  if (!tab.url.startsWith("http")) return;
+  updateTabStatus(tabId, tab.url);
+});
 
-  try {
-    const result = await apiRequest("POST", "/api/check-duplicate", {
-      url: tab.url,
-    });
-    if (result) {
-      chrome.action.setBadgeText({ text: "★", tabId });
-      chrome.action.setBadgeBackgroundColor({ color: "#f59e0b", tabId });
-    } else {
-      chrome.action.setBadgeText({ text: "", tabId });
-    }
-  } catch {
-    chrome.action.setBadgeText({ text: "", tabId });
-  }
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  const tab = await chrome.tabs.get(activeInfo.tabId);
+  updateTabStatus(activeInfo.tabId, tab.url);
 });
