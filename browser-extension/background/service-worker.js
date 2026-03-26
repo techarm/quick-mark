@@ -78,7 +78,7 @@ async function apiRequest(method, path, body = null) {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "save-to-quickmark",
-    title: "Save to Quick Mark",
+    title: chrome.i18n.getMessage("contextMenuSave"),
     contexts: ["page", "link"],
   });
 });

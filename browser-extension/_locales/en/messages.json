@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "Quick Mark"
+  },
+  "extDescription": {
+    "message": "Save links to Quick Mark desktop app with one click"
+  },
+  "contextMenuSave": {
+    "message": "Save to Quick Mark"
+  }
+}

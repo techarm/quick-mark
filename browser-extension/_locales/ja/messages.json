@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "Quick Mark"
+  },
+  "extDescription": {
+    "message": "ワンクリックでQuick Markデスクトップアプリにリンクを保存"
+  },
+  "contextMenuSave": {
+    "message": "Quick Mark に保存"
+  }
+}
