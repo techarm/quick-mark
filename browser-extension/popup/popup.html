@@ -8,19 +8,23 @@
 <body>
   <div class="container">
     <div class="header">
-      <svg class="logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg class="logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
       </svg>
       <h1>Quick Mark</h1>
     </div>
 
-    <div id="loading" class="status-message">読み込み中...</div>
+    <div id="loading" class="loading">
+      <div class="skeleton skeleton-title"></div>
+      <div class="skeleton skeleton-url"></div>
+      <div class="skeleton skeleton-btn"></div>
+    </div>
 
-    <div id="error" class="status-message error" hidden></div>
+    <div id="error" class="status-message error" role="alert" hidden></div>
 
     <div id="not-configured" hidden>
       <p class="status-message">APIトークンが未設定です。</p>
-      <button id="open-options" class="btn btn-secondary">設定を開く</button>
+      <button id="open-options" class="btn btn-secondary" style="width:100%">設定を開く</button>
     </div>
 
     <div id="content" hidden>
@@ -30,21 +34,29 @@
           <div id="page-url" class="page-url"></div>
         </div>
 
-        <div id="duplicate-info" class="duplicate-info" hidden>
-          <span class="check-mark">✓</span> 保存済み
+        <div id="duplicate-info" class="duplicate-info" role="status" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          保存済み
           <span id="duplicate-category" class="duplicate-category"></span>
         </div>
 
         <div id="actions" class="actions">
           <button id="save-btn" class="btn btn-primary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
               <polyline points="17 21 17 13 7 13 7 21"/>
               <polyline points="7 3 7 8 15 8"/>
             </svg>
             保存
           </button>
-          <button id="expand-btn" class="btn btn-secondary btn-small">▼ 詳細</button>
+          <button id="expand-btn" class="btn btn-secondary" aria-label="詳細オプションを表示">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+            詳細
+          </button>
         </div>
       </div>
 
@@ -55,8 +67,8 @@
         </div>
 
         <div class="form-group">
-          <label>URL</label>
-          <div id="edit-url" class="page-url"></div>
+          <label id="url-label">URL</label>
+          <div id="edit-url" class="page-url" aria-labelledby="url-label"></div>
         </div>
 
         <div class="form-group">
@@ -68,19 +80,28 @@
 
         <div class="actions">
           <button id="save-expanded-btn" class="btn btn-primary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
               <polyline points="17 21 17 13 7 13 7 21"/>
               <polyline points="7 3 7 8 15 8"/>
             </svg>
             保存
           </button>
-          <button id="collapse-btn" class="btn btn-secondary btn-small">▲ 閉じる</button>
+          <button id="collapse-btn" class="btn btn-secondary" aria-label="詳細オプションを閉じる">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="18 15 12 9 6 15"/>
+            </svg>
+            閉じる
+          </button>
         </div>
       </div>
 
-      <div id="save-success" class="status-message success" hidden>
-        <span class="check-mark">✓</span> 保存しました
+      <div id="save-success" class="status-message success" role="status" hidden>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        保存しました
       </div>
     </div>
   </div>

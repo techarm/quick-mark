@@ -7,13 +7,23 @@
 </head>
 <body>
   <div class="container">
-    <h1>Quick Mark 設定</h1>
+    <div class="header">
+      <svg class="logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+      </svg>
+      <h1>Quick Mark 設定</h1>
+    </div>
 
     <div class="form-group">
       <label for="api-token">APIトークン</label>
       <div class="input-group">
         <input type="password" id="api-token" class="input" placeholder="APIトークンを入力" />
-        <button id="toggle-token" class="btn btn-icon" title="表示/非表示">👁</button>
+        <button id="toggle-token" class="btn btn-icon" aria-label="トークンの表示/非表示を切り替え">
+          <svg id="icon-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
       </div>
       <p class="hint">トークンは <code>~/Library/Application Support/com.techarm.quickmark/api_token</code> にあります</p>
     </div>
@@ -31,7 +41,7 @@
       <button id="test-btn" class="btn btn-secondary">接続テスト</button>
     </div>
 
-    <div id="status" class="status" hidden></div>
+    <div id="status" class="status" role="alert" hidden></div>
   </div>
 
   <script src="../lib/api.js"></script>

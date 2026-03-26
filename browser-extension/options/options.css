@@ -5,20 +5,45 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Hiragino Sans", "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
-  color: #1a1a2e;
-  background: #fff;
+  line-height: 1.5;
+  color: rgba(252, 248, 248, 0.95);
+  background: #1a1414;
   padding: 24px;
   min-width: 400px;
+  -webkit-font-smoothing: antialiased;
 }
 
-h1 {
-  font-size: 18px;
-  font-weight: 600;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* === Header === */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 200, 200, 0.07);
 }
 
+.logo {
+  color: #e25050;
+  flex-shrink: 0;
+}
+
+.header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(252, 248, 248, 0.95);
+}
+
+/* === Form === */
 .form-group {
   margin-bottom: 16px;
 }
@@ -27,7 +52,7 @@ h1 {
   display: block;
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: rgba(210, 190, 190, 0.72);
   margin-bottom: 6px;
 }
 
@@ -38,44 +63,64 @@ h1 {
 
 .input {
   flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 200, 200, 0.12);
+  border-radius: 8px;
+  background: rgba(50, 35, 35, 0.6);
+  color: rgba(252, 248, 248, 0.95);
   font-size: 13px;
   font-family: inherit;
   outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .input:focus {
-  border-color: #e25050;
-  box-shadow: 0 0 0 2px rgba(226, 80, 80, 0.1);
+  border-color: rgba(226, 80, 80, 0.6);
+  box-shadow: 0 0 0 3px rgba(226, 80, 80, 0.12);
+}
+
+.input::placeholder {
+  color: rgba(170, 150, 150, 0.65);
 }
 
 .hint {
-  margin-top: 4px;
+  margin-top: 6px;
   font-size: 11px;
-  color: #9ca3af;
+  color: rgba(170, 150, 150, 0.65);
+  line-height: 1.6;
 }
 
 .hint code {
-  background: #f3f4f6;
-  padding: 1px 4px;
-  border-radius: 3px;
+  background: rgba(50, 35, 35, 0.6);
+  padding: 2px 6px;
+  border-radius: 4px;
   font-size: 11px;
+  color: rgba(210, 190, 190, 0.72);
+  font-family: "SF Mono", "Menlo", monospace;
 }
 
+/* === Buttons === */
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  min-height: 38px;
   padding: 8px 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
+  font-family: inherit;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
   white-space: nowrap;
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #1a1414, 0 0 0 4px rgba(226, 80, 80, 0.6);
 }
 
 .btn-primary {
@@ -84,22 +129,41 @@ h1 {
 }
 
 .btn-primary:hover {
-  background: #d03030;
+  background: #ef6b6b;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
 }
 
 .btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
+  background: rgba(50, 35, 35, 0.6);
+  color: rgba(210, 190, 190, 0.72);
+  border: 1px solid rgba(255, 200, 200, 0.07);
 }
 
 .btn-secondary:hover {
-  background: #e5e7eb;
+  background: rgba(255, 200, 200, 0.05);
+  border-color: rgba(255, 200, 200, 0.12);
+  color: rgba(252, 248, 248, 0.95);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
 }
 
 .btn-icon {
-  background: #f3f4f6;
-  padding: 8px 10px;
-  font-size: 14px;
+  background: rgba(50, 35, 35, 0.6);
+  border: 1px solid rgba(255, 200, 200, 0.07);
+  min-width: 38px;
+  padding: 8px;
+  color: rgba(210, 190, 190, 0.72);
+}
+
+.btn-icon:hover {
+  background: rgba(255, 200, 200, 0.05);
+  border-color: rgba(255, 200, 200, 0.12);
+  color: rgba(252, 248, 248, 0.95);
 }
 
 .actions {
@@ -108,19 +172,124 @@ h1 {
   margin-top: 20px;
 }
 
+/* === Status === */
 .status {
   margin-top: 16px;
   padding: 10px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
+  animation: fadeIn 200ms ease;
 }
 
 .status.success {
-  background: #f0fdf4;
-  color: #16a34a;
+  background: rgba(46, 213, 115, 0.08);
+  border: 1px solid rgba(46, 213, 115, 0.12);
+  color: #2ed573;
 }
 
 .status.error {
-  background: #fef2f2;
-  color: #ef4444;
+  background: rgba(255, 71, 87, 0.1);
+  border: 1px solid rgba(255, 71, 87, 0.12);
+  color: #ff4757;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* === Light Mode === */
+@media (prefers-color-scheme: light) {
+  body {
+    color: rgba(30, 20, 20, 0.92);
+    background: #ffffff;
+  }
+
+  .header {
+    border-bottom-color: rgba(120, 80, 80, 0.1);
+  }
+
+  .logo {
+    color: #cc4040;
+  }
+
+  .header h1 {
+    color: rgba(30, 20, 20, 0.92);
+  }
+
+  .form-group label {
+    color: rgba(80, 60, 60, 0.78);
+  }
+
+  .input {
+    border-color: rgba(120, 80, 80, 0.16);
+    background: rgba(200, 180, 180, 0.15);
+    color: rgba(30, 20, 20, 0.92);
+  }
+
+  .input:focus {
+    border-color: rgba(204, 64, 64, 0.5);
+    box-shadow: 0 0 0 3px rgba(204, 64, 64, 0.12);
+  }
+
+  .input::placeholder {
+    color: rgba(100, 80, 80, 0.7);
+  }
+
+  .hint {
+    color: rgba(100, 80, 80, 0.7);
+  }
+
+  .hint code {
+    background: rgba(200, 180, 180, 0.15);
+    color: rgba(80, 60, 60, 0.78);
+  }
+
+  .btn:focus-visible {
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(204, 64, 64, 0.5);
+  }
+
+  .btn-primary {
+    background: #cc4040;
+  }
+
+  .btn-primary:hover {
+    background: #b83636;
+  }
+
+  .btn-secondary {
+    background: rgba(200, 180, 180, 0.15);
+    color: rgba(80, 60, 60, 0.78);
+    border-color: rgba(120, 80, 80, 0.1);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(226, 80, 80, 0.06);
+    border-color: rgba(120, 80, 80, 0.16);
+    color: rgba(30, 20, 20, 0.92);
+  }
+
+  .btn-icon {
+    background: rgba(200, 180, 180, 0.15);
+    border-color: rgba(120, 80, 80, 0.1);
+    color: rgba(80, 60, 60, 0.78);
+  }
+
+  .btn-icon:hover {
+    background: rgba(226, 80, 80, 0.06);
+    border-color: rgba(120, 80, 80, 0.16);
+    color: rgba(30, 20, 20, 0.92);
+  }
+
+  .status.success {
+    color: #1a8a4a;
+    background: rgba(26, 138, 74, 0.06);
+    border-color: rgba(26, 138, 74, 0.1);
+  }
+
+  .status.error {
+    color: #d43040;
+    background: rgba(212, 48, 64, 0.06);
+    border-color: rgba(212, 48, 64, 0.1);
+  }
 }

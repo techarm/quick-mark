@@ -45,11 +45,10 @@ async function init() {
     if (result) {
       isDuplicate = true;
       $("duplicate-info").hidden = false;
+      $("actions").hidden = true;
       if (result.category_name) {
         $("duplicate-category").textContent = result.category_name;
       }
-      $("save-btn").disabled = true;
-      $("save-expanded-btn").disabled = true;
     }
   } catch (e) {
     $("loading").hidden = true;
@@ -116,7 +115,7 @@ async function handleSave() {
       favicon_url: faviconUrl,
     });
 
-    $("actions").hidden = true;
+    $("simple-mode").hidden = true;
     $("save-success").hidden = false;
 
     // Notify service worker to update tab status
@@ -172,8 +171,6 @@ async function handleSaveExpanded() {
     });
 
     $("expanded-mode").hidden = true;
-    $("simple-mode").hidden = false;
-    $("actions").hidden = true;
     $("save-success").hidden = false;
 
     const [tab] = await chrome.tabs.query({
@@ -181,8 +178,7 @@ async function handleSaveExpanded() {
       currentWindow: true,
     });
     if (tab?.id) {
-      chrome.action.setBadgeText({ text: "★", tabId: tab.id });
-      chrome.action.setBadgeBackgroundColor({ color: "#f59e0b", tabId: tab.id });
+      chrome.runtime.sendMessage({ type: "refresh-tab-status", tabId: tab.id, url: currentUrl });
     }
   } catch (e) {
     $("save-expanded-btn").disabled = false;
