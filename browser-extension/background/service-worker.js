@@ -73,25 +73,11 @@ async function apiRequest(method, path, body = null) {
   }
 }
 
-// === Icon & Menu state ===
-
-const ICON_DEFAULT = {
-  "16": chrome.runtime.getURL("icons/icon16.png"),
-  "32": chrome.runtime.getURL("icons/icon32.png"),
-  "48": chrome.runtime.getURL("icons/icon48.png"),
-  "128": chrome.runtime.getURL("icons/icon128.png"),
-};
-
-const ICON_SAVED = {
-  "16": chrome.runtime.getURL("icons/icon16_saved.png"),
-  "32": chrome.runtime.getURL("icons/icon32_saved.png"),
-  "48": chrome.runtime.getURL("icons/icon48_saved.png"),
-  "128": chrome.runtime.getURL("icons/icon128_saved.png"),
-};
+// === Tab status (badge + context menu) ===
 
 async function updateTabStatus(tabId, url) {
   if (!url || !url.startsWith("http")) {
-    await chrome.action.setIcon({ path: ICON_DEFAULT, tabId });
+    chrome.action.setBadgeText({ text: "", tabId });
     chrome.contextMenus.update("save-to-quickmark", {
       title: chrome.i18n.getMessage("contextMenuSave"),
       enabled: true,
@@ -102,21 +88,21 @@ async function updateTabStatus(tabId, url) {
   try {
     const result = await apiRequest("POST", "/api/check-duplicate", { url });
     if (result) {
-      await chrome.action.setIcon({ path: ICON_SAVED, tabId });
+      chrome.action.setBadgeText({ text: "★", tabId });
+      chrome.action.setBadgeBackgroundColor({ color: "#f59e0b", tabId });
       chrome.contextMenus.update("save-to-quickmark", {
         title: chrome.i18n.getMessage("contextMenuSaved"),
         enabled: false,
       });
     } else {
-      await chrome.action.setIcon({ path: ICON_DEFAULT, tabId });
+      chrome.action.setBadgeText({ text: "", tabId });
       chrome.contextMenus.update("save-to-quickmark", {
         title: chrome.i18n.getMessage("contextMenuSave"),
         enabled: true,
       });
     }
-  } catch (e) {
-    console.error("[QuickMark] updateTabStatus error:", e);
-    await chrome.action.setIcon({ path: ICON_DEFAULT, tabId });
+  } catch {
+    chrome.action.setBadgeText({ text: "", tabId });
   }
 }
 
@@ -182,4 +168,12 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   const tab = await chrome.tabs.get(activeInfo.tabId);
   updateTabStatus(activeInfo.tabId, tab.url);
+});
+
+// === Message from popup to refresh tab status ===
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === "refresh-tab-status" && msg.tabId && msg.url) {
+    updateTabStatus(msg.tabId, msg.url);
+  }
 });

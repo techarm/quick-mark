@@ -119,14 +119,13 @@ async function handleSave() {
     $("actions").hidden = true;
     $("save-success").hidden = false;
 
-    // Update badge
+    // Notify service worker to update tab status
     const [tab] = await chrome.tabs.query({
       active: true,
       currentWindow: true,
     });
     if (tab?.id) {
-      chrome.action.setBadgeText({ text: "★", tabId: tab.id });
-      chrome.action.setBadgeBackgroundColor({ color: "#f59e0b", tabId: tab.id });
+      chrome.runtime.sendMessage({ type: "refresh-tab-status", tabId: tab.id, url: currentUrl });
     }
   } catch (e) {
     $("save-btn").disabled = false;
