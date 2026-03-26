@@ -24,9 +24,14 @@ export function LinkList({ links, onOpen, onEdit, onDelete, onTogglePin }: LinkL
     clearSelection,
   } = useUIStore();
   const lastClickedIndex = useRef<number>(-1);
+  const menuActionRef = useRef(false);
 
   const handleItemClick = useCallback(
     (link: Link, index: number, e: React.MouseEvent) => {
+      if (menuActionRef.current) {
+        menuActionRef.current = false;
+        return;
+      }
       const isMultiSelect = selectedLinkIds.size > 0;
 
       if (e.metaKey || e.ctrlKey) {
@@ -170,6 +175,7 @@ export function LinkList({ links, onOpen, onEdit, onDelete, onTogglePin }: LinkL
             onEdit={onEdit ? () => onEdit(link) : undefined}
             onDelete={onDelete ? () => onDelete(link) : undefined}
             onTogglePin={onTogglePin ? () => onTogglePin(link) : undefined}
+            menuActionRef={menuActionRef}
           />
         ))}
       </div>
@@ -188,6 +194,7 @@ export function LinkList({ links, onOpen, onEdit, onDelete, onTogglePin }: LinkL
           onEdit={onEdit ? () => onEdit(link) : undefined}
           onDelete={onDelete ? () => onDelete(link) : undefined}
           onTogglePin={onTogglePin ? () => onTogglePin(link) : undefined}
+          menuActionRef={menuActionRef}
         />
       ))}
     </div>
@@ -200,13 +207,23 @@ function LinkRowMenu({
   onEdit,
   onDelete,
   onTogglePin,
+  menuActionRef,
 }: {
   link: Link;
   onOpen: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onTogglePin?: () => void;
+  menuActionRef: React.RefObject<boolean>;
 }) {
+  const withFlag = (fn?: () => void) => {
+    if (!fn) return undefined;
+    return () => {
+      menuActionRef.current = true;
+      fn();
+    };
+  };
+
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
@@ -220,19 +237,19 @@ function LinkRowMenu({
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content className="dropdown-menu-content" sideOffset={4} align="end">
-          <DropdownMenu.Item className="dropdown-menu-item" onSelect={onOpen}>
+        <DropdownMenu.Content className="dropdown-menu-content" sideOffset={4} align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
+          <DropdownMenu.Item className="dropdown-menu-item" onSelect={withFlag(onOpen)}>
             <ExternalLink size={14} />
             ブラウザで開く
           </DropdownMenu.Item>
           {onEdit && (
-            <DropdownMenu.Item className="dropdown-menu-item" onSelect={onEdit}>
+            <DropdownMenu.Item className="dropdown-menu-item" onSelect={withFlag(onEdit)}>
               <Pencil size={14} />
               編集
             </DropdownMenu.Item>
           )}
           {onTogglePin && (
-            <DropdownMenu.Item className="dropdown-menu-item" onSelect={onTogglePin}>
+            <DropdownMenu.Item className="dropdown-menu-item" onSelect={withFlag(onTogglePin)}>
               {link.is_pinned ? <PinOff size={14} /> : <Pin size={14} />}
               {link.is_pinned ? 'ピン留め解除' : 'ピン留め'}
             </DropdownMenu.Item>
@@ -242,7 +259,7 @@ function LinkRowMenu({
               <DropdownMenu.Separator className="dropdown-menu-separator" />
               <DropdownMenu.Item
                 className="dropdown-menu-item dropdown-menu-item-danger"
-                onSelect={onDelete}
+                onSelect={withFlag(onDelete)}
               >
                 <Trash2 size={14} />
                 削除
@@ -263,6 +280,7 @@ function LinkRow({
   onEdit,
   onDelete,
   onTogglePin,
+  menuActionRef,
 }: {
   link: Link;
   selected: boolean;
@@ -271,6 +289,7 @@ function LinkRow({
   onEdit?: () => void;
   onDelete?: () => void;
   onTogglePin?: () => void;
+  menuActionRef: React.RefObject<boolean>;
 }) {
   const domain = getDomain(link.url);
   const expiryInfo = getExpiryInfo(link);
@@ -398,6 +417,7 @@ function LinkRow({
         onEdit={onEdit}
         onDelete={onDelete}
         onTogglePin={onTogglePin}
+        menuActionRef={menuActionRef}
       />
     </div>
   );
@@ -411,6 +431,7 @@ function LinkCard({
   onEdit,
   onDelete,
   onTogglePin,
+  menuActionRef,
 }: {
   link: Link;
   selected: boolean;
@@ -419,6 +440,7 @@ function LinkCard({
   onEdit?: () => void;
   onDelete?: () => void;
   onTogglePin?: () => void;
+  menuActionRef: React.RefObject<boolean>;
 }) {
   const domain = getDomain(link.url);
   const expiryInfo = getExpiryInfo(link);
@@ -496,6 +518,7 @@ function LinkCard({
             onEdit={onEdit}
             onDelete={onDelete}
             onTogglePin={onTogglePin}
+            menuActionRef={menuActionRef}
           />
         </div>
       </div>
