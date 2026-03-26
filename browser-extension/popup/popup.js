@@ -46,9 +46,6 @@ async function init() {
       isDuplicate = true;
       $("duplicate-info").hidden = false;
       $("actions").hidden = true;
-      if (result.category_name) {
-        $("duplicate-category").textContent = result.category_name;
-      }
     }
   } catch (e) {
     $("loading").hidden = true;
