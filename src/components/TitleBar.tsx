@@ -18,12 +18,7 @@ export function TitleBar() {
 
   const handleMaximize = async () => {
     const { getCurrentWindow } = await import('@tauri-apps/api/window');
-    const win = getCurrentWindow();
-    if (await win.isMaximized()) {
-      await win.unmaximize();
-    } else {
-      await win.maximize();
-    }
+    await getCurrentWindow().toggleMaximize();
   };
 
   const handleClose = async () => {
