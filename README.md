@@ -1,5 +1,10 @@
 # QuickMark
 
+[![Release](https://img.shields.io/github/v/release/techarm/quick-mark?style=flat-square)](https://github.com/techarm/quick-mark/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/techarm/quick-mark/release.yml?style=flat-square&label=build)](https://github.com/techarm/quick-mark/actions)
+[![License](https://img.shields.io/github/license/techarm/quick-mark?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey?style=flat-square)]()
+
 [日本語](README.ja.md)
 
 A fast, cross-platform bookmark and credential manager built with Tauri, React, and TypeScript.

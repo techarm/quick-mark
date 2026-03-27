@@ -1,5 +1,10 @@
 # QuickMark
 
+[![Release](https://img.shields.io/github/v/release/techarm/quick-mark?style=flat-square)](https://github.com/techarm/quick-mark/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/techarm/quick-mark/release.yml?style=flat-square&label=build)](https://github.com/techarm/quick-mark/actions)
+[![License](https://img.shields.io/github/license/techarm/quick-mark?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey?style=flat-square)]()
+
 [English](README.md)
 
 Tauri、React、TypeScript で構築された、高速でクロスプラットフォームなブックマーク & 認証情報マネージャーです。
