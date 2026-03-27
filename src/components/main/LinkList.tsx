@@ -2,7 +2,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ExternalLink, MoreHorizontal, Pencil, Pin, PinOff, Timer, Trash2 } from 'lucide-react';
 import { useCallback, useRef } from 'react';
 import type { Link } from '../../lib/types';
-import { getDomain, getExpiryInfo } from '../../lib/utils';
+import { getDomain, getExpiryInfo, modKey, shiftKey } from '../../lib/utils';
 import { useUIStore } from '../../stores/ui.store';
 
 interface LinkListProps {
@@ -141,7 +141,7 @@ export function LinkList({ links, onOpen, onEdit, onDelete, onTogglePin }: LinkL
             >
               右上の「追加」ボタンまたは
               <span className="kbd" style={{ margin: '0 4px' }}>
-                ⌘⇧A
+                {modKey}{shiftKey}A
               </span>
               で追加
             </p>

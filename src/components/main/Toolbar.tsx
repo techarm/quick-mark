@@ -1,4 +1,5 @@
 import { Download, LayoutGrid, List, Plus, Search, Upload, X } from 'lucide-react';
+import { modKey } from '../../lib/utils';
 import { useUIStore } from '../../stores/ui.store';
 
 interface ToolbarProps {
@@ -47,7 +48,7 @@ export function Toolbar({
         <Search size={15} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
         <input
           type="text"
-          placeholder="リンクを検索...  ⌘K"
+          placeholder={`リンクを検索...  ${modKey}K`}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           style={{

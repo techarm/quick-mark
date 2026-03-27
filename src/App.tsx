@@ -23,7 +23,7 @@ import type {
   Link,
   UpdateLinkInput,
 } from './lib/types';
-import { safeOpenUrl } from './lib/utils';
+import { isModKey, safeOpenUrl } from './lib/utils';
 import { useUIStore } from './stores/ui.store';
 
 // 独立検索ウィンドウのトグル（tauri.conf.jsonで事前定義済み）
@@ -276,18 +276,18 @@ function App() {
   // アプリ内キーボードショートカット
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd+K: 独立検索ウィンドウを開く
-      if (e.metaKey && e.key === 'k') {
+      // Cmd/Ctrl+K: 独立検索ウィンドウを開く
+      if (isModKey(e) && e.key === 'k') {
         e.preventDefault();
         toggleSearchWindow();
       }
-      // Cmd+Shift+A: リンク追加
-      if (e.metaKey && e.shiftKey && e.key === 'a') {
+      // Cmd/Ctrl+Shift+A: リンク追加
+      if (isModKey(e) && e.shiftKey && e.key === 'a') {
         e.preventDefault();
         setAddDialogOpen(true);
       }
-      // Cmd+A: リンク全選択（入力フォーカス中は除外）
-      if (e.metaKey && e.key === 'a' && !e.shiftKey) {
+      // Cmd/Ctrl+A: リンク全選択（入力フォーカス中は除外）
+      if (isModKey(e) && e.key === 'a' && !e.shiftKey) {
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
           e.preventDefault();
