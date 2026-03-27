@@ -100,6 +100,16 @@ body {
   font-family: "SF Mono", "Menlo", monospace;
 }
 
+.hint code.copyable {
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.hint code.copyable:hover {
+  background: rgba(226, 80, 80, 0.15);
+  color: rgba(252, 248, 248, 0.95);
+}
+
 /* === Buttons === */
 .btn {
   display: inline-flex;
@@ -243,6 +253,11 @@ body {
   .hint code {
     background: rgba(200, 180, 180, 0.15);
     color: rgba(80, 60, 60, 0.78);
+  }
+
+  .hint code.copyable:hover {
+    background: rgba(204, 64, 64, 0.1);
+    color: rgba(30, 20, 20, 0.92);
   }
 
   .btn:focus-visible {
