@@ -61,6 +61,13 @@ pub fn run() {
             });
 
             app.manage(db);
+
+            // Windows: ネイティブタイトルバーを無効化（カスタムタイトルバーを使用）
+            #[cfg(target_os = "windows")]
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_decorations(false);
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -108,11 +115,15 @@ pub fn run() {
         .on_window_event(|window, event| {
             match event {
                 WindowEvent::CloseRequested { api, .. } => {
-                    // メインウィンドウ: 閉じる代わりに非表示（macOSスタイル）
+                    // macOS: メインウィンドウは閉じる代わりに非表示（Dockから再表示可能）
+                    #[cfg(target_os = "macos")]
                     if window.label() == "main" {
                         api.prevent_close();
                         let _ = window.hide();
                     }
+                    // Windows: 通常通り閉じる
+                    #[cfg(not(target_os = "macos"))]
+                    let _ = api;
                 }
                 WindowEvent::Focused(focused) => {
                     // 検索ウィンドウ: フォーカスを失ったら自動非表示（Spotlight風）

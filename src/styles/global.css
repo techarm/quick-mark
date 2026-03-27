@@ -418,6 +418,30 @@ input[type="number"].input-field::-webkit-outer-spin-button {
   cursor: default;
 }
 
+/* Windows タイトルバーボタン */
+.win-titlebar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.win-titlebar-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.win-titlebar-btn-close:hover {
+  background: #e81123;
+  color: #ffffff;
+}
+
 /* ============================================
    フォーカスリング
    ============================================ */
