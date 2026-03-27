@@ -1,5 +1,7 @@
 # QuickMark
 
+[日本語](README.ja.md)
+
 A fast, cross-platform bookmark and credential manager built with Tauri, React, and TypeScript.
 
 ## Features
