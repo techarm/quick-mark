@@ -61,6 +61,34 @@ bun tauri build
 | `Cmd/Ctrl+A` | すべてのリンクを選択 |
 | `Escape` | 選択解除 / 閉じる |
 
+## ブラウザ拡張機能
+
+Chrome / Edge 向けの拡張機能で、閲覧中のページを素早く QuickMark に保存できます。
+
+### インストール
+
+1. ブラウザで `chrome://extensions` を開く
+2. 「デベロッパーモード」を有効にする
+3. 「パッケージ化されていない拡張機能を読み込む」をクリック
+4. `browser-extension/` フォルダを選択
+
+### 初期設定
+
+1. QuickMark デスクトップアプリを起動する
+2. 拡張機能アイコンを右クリック →「オプション」を開く
+3. API トークンを入力する
+   - トークンの保存場所:
+     - **macOS**: `~/Library/Application Support/dev.techarm.quickmark/api_token`
+     - **Windows**: `%APPDATA%\dev.techarm.quickmark\api_token`
+4. 「自動検出」ボタンでポートを検出する
+5. 「接続テスト」で接続を確認する
+
+### 使い方
+
+- **拡張機能アイコンをクリック** → ポップアップからタイトル・カテゴリを指定して保存
+- **ページ上で右クリック** →「QuickMark に保存」で素早く保存
+- 保存済みのページには ★ バッジが表示されます
+
 ## ライセンス
 
 [MIT](LICENSE)
