@@ -61,10 +61,7 @@ export function BulkActionBar({
             align="end"
             style={{ maxHeight: 300, overflow: 'auto' }}
           >
-            <DropdownMenu.Item
-              className="dropdown-menu-item"
-              onSelect={() => onMove(null)}
-            >
+            <DropdownMenu.Item className="dropdown-menu-item" onSelect={() => onMove(null)}>
               未分類に移動
             </DropdownMenu.Item>
             <DropdownMenu.Separator className="dropdown-menu-separator" />

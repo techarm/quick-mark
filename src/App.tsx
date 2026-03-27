@@ -163,16 +163,25 @@ function App() {
             description: '30秒後にクリップボードをクリアします',
           });
         });
-        if (cancelled) { unlisten1(); return; }
+        if (cancelled) {
+          unlisten1();
+          return;
+        }
         unlisten2 = await listen('credential:clipboard-cleared', () => {
           toast.info('クリップボードをクリアしました');
         });
-        if (cancelled) { unlisten2(); return; }
+        if (cancelled) {
+          unlisten2();
+          return;
+        }
         unlisten3 = await listen('links:created-from-extension', () => {
           loadLinksRef.current();
           toast.success('ブラウザ拡張機能からリンクを保存しました');
         });
-        if (cancelled) { unlisten3(); return; }
+        if (cancelled) {
+          unlisten3();
+          return;
+        }
       } catch {
         // ブラウザ環境では無視
       }

@@ -340,7 +340,9 @@ export function AddLinkDialog({
 
               {/* タイトル */}
               <div className="form-field">
-                <label htmlFor="add-link-title" className="form-label">タイトル</label>
+                <label htmlFor="add-link-title" className="form-label">
+                  タイトル
+                </label>
                 <input
                   id="add-link-title"
                   type="text"
@@ -353,7 +355,9 @@ export function AddLinkDialog({
 
               {/* 説明 */}
               <div className="form-field">
-                <label htmlFor="add-link-desc" className="form-label">説明</label>
+                <label htmlFor="add-link-desc" className="form-label">
+                  説明
+                </label>
                 <textarea
                   id="add-link-desc"
                   value={description}
@@ -372,7 +376,9 @@ export function AddLinkDialog({
 
               {/* カテゴリ */}
               <div className="form-field">
-                <label htmlFor="add-link-category" className="form-label">カテゴリ</label>
+                <label htmlFor="add-link-category" className="form-label">
+                  カテゴリ
+                </label>
                 <select
                   id="add-link-category"
                   value={categoryId}
@@ -443,7 +449,6 @@ export function AddLinkDialog({
               </button>
             </div>
           </form>
-
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

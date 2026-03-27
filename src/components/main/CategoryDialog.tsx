@@ -137,8 +137,14 @@ export function CategoryDialog({
               </div>
 
               <div className="form-field">
-                <label className="form-label" id="category-color-label">カラー</label>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 4 }} role="group" aria-labelledby="category-color-label">
+                <label className="form-label" id="category-color-label">
+                  カラー
+                </label>
+                <div
+                  style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 4 }}
+                  role="group"
+                  aria-labelledby="category-color-label"
+                >
                   {PRESET_COLORS.map((c) => (
                     <button
                       key={c}
@@ -155,7 +161,9 @@ export function CategoryDialog({
               </div>
 
               <div className="form-field">
-                <label htmlFor="category-alias" className="form-label">検索キーワード</label>
+                <label htmlFor="category-alias" className="form-label">
+                  検索キーワード
+                </label>
                 <input
                   id="category-alias"
                   type="text"
@@ -167,7 +175,9 @@ export function CategoryDialog({
               </div>
 
               <div className="form-field">
-                <label htmlFor="category-parent" className="form-label">親カテゴリ</label>
+                <label htmlFor="category-parent" className="form-label">
+                  親カテゴリ
+                </label>
                 <select
                   id="category-parent"
                   value={parentId}

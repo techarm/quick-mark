@@ -125,7 +125,9 @@ export function EditLinkDialog({
               </div>
 
               <div className="form-field">
-                <label htmlFor="edit-link-title" className="form-label">タイトル</label>
+                <label htmlFor="edit-link-title" className="form-label">
+                  タイトル
+                </label>
                 <input
                   id="edit-link-title"
                   type="text"
@@ -137,7 +139,9 @@ export function EditLinkDialog({
               </div>
 
               <div className="form-field">
-                <label htmlFor="edit-link-desc" className="form-label">説明</label>
+                <label htmlFor="edit-link-desc" className="form-label">
+                  説明
+                </label>
                 <textarea
                   id="edit-link-desc"
                   value={description}
@@ -155,7 +159,9 @@ export function EditLinkDialog({
               </div>
 
               <div className="form-field">
-                <label htmlFor="edit-link-category" className="form-label">カテゴリ</label>
+                <label htmlFor="edit-link-category" className="form-label">
+                  カテゴリ
+                </label>
                 <select
                   id="edit-link-category"
                   value={categoryId}
