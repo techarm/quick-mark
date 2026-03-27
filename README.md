@@ -5,70 +5,62 @@
 [![License](https://img.shields.io/github/license/techarm/quick-mark?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey?style=flat-square)]()
 
-[日本語](README.ja.md)
+Tauri、React、TypeScript で構築された、高速でクロスプラットフォームなブックマーク & 認証情報マネージャーです。
 
-A fast, cross-platform bookmark and credential manager built with Tauri, React, and TypeScript.
+## 機能
 
-## Features
+- **リンク管理** — ブックマークの保存・整理・検索。メタデータとファビコンを自動取得
+- **スマートフォルダ** — すべてのリンク、最近追加、一時リンク、期限切れ、ピン留め、認証情報のプリセットフィルタ
+- **カテゴリ** — カスタムカラー付きの階層フォルダでリンクを整理
+- **一時リンク** — 有効期限を設定して自動クリーンアップ
+- **認証情報の保存** — ユーザー名とパスワードをワンクリックでコピー、30秒後に自動クリア
+- **コマンドパレット** — `Cmd+Shift+Space` / `Ctrl+Shift+Space` でグローバル検索
+- **ブラウザ拡張機能** — Chrome/Edge 拡張機能で任意のWebページから素早く保存
+- **インポート/エクスポート** — ブラウザのブックマーク（HTML）や JSON バックアップからインポート、ライブラリ全体をエクスポート
+- **一括操作** — 複数リンクを選択して移動・削除
+- **ダーク/ライトテーマ** — テーマ切替と設定の永続化
+- **クロスプラットフォーム** — macOS（Apple Silicon & Intel）と Windows のネイティブビルド
 
-- **Link Management** — Save, organize, and search bookmarks with automatic metadata and favicon fetching
-- **Smart Folders** — Pre-built filters: All Links, Recently Added, Temporary Links, Expired, Pinned, Credentials
-- **Categories** — Hierarchical folders with custom colors for organizing links
-- **Temporary Links** — Set expiration dates on bookmarks for automatic cleanup
-- **Credential Storage** — Save usernames and passwords with one-click copy and 30-second auto-clear
-- **Command Palette** — Global search with `Cmd+Shift+Space` / `Ctrl+Shift+Space` for instant access
-- **Browser Extension** — Chrome/Edge extension for quick saving from any webpage
-- **Import/Export** — Import bookmarks from browsers (HTML) or JSON backups, export your full library
-- **Bulk Operations** — Multi-select links to move or delete in batch
-- **Dark/Light Theme** — Toggle between themes with persistent preference
-- **Cross-Platform** — Native builds for macOS (Apple Silicon & Intel) and Windows
+## 技術スタック
 
-## Tech Stack
+- **フロントエンド**: React 19, TypeScript, Tailwind CSS, Radix UI, Zustand
+- **バックエンド**: Rust, Tauri v2, SQLite
+- **ビルド**: Vite, Biome
 
-- **Frontend**: React 19, TypeScript, Tailwind CSS, Radix UI, Zustand
-- **Backend**: Rust, Tauri v2, SQLite
-- **Build**: Vite, Biome
+## はじめに
 
-## Getting Started
-
-### Prerequisites
+### 前提条件
 
 - [Rust](https://rustup.rs/)
 - [Bun](https://bun.sh/)
 
-### Development
+### 開発
 
 ```bash
-# Install dependencies
+# 依存関係のインストール
 bun install
 
-# Start dev server
+# 開発サーバーの起動
 bun tauri dev
 ```
 
-### Build
+### ビルド
 
 ```bash
-# Build for current platform
+# 現在のプラットフォーム向けにビルド
 bun tauri build
 ```
 
-## Keyboard Shortcuts
+## キーボードショートカット
 
-| Shortcut | Action |
+| ショートカット | アクション |
 |---|---|
-| `Cmd/Ctrl+Shift+Space` | Toggle search palette |
-| `Cmd/Ctrl+Shift+A` | Add new link |
-| `Cmd/Ctrl+K` | Focus search |
-| `Cmd/Ctrl+A` | Select all links |
-| `Escape` | Deselect / Close |
+| `Cmd/Ctrl+Shift+Space` | 検索パレットの切替 |
+| `Cmd/Ctrl+Shift+A` | 新しいリンクを追加 |
+| `Cmd/Ctrl+K` | 検索にフォーカス |
+| `Cmd/Ctrl+A` | すべてのリンクを選択 |
+| `Escape` | 選択解除 / 閉じる |
 
-## Contributing
-
-Bug reports and feature requests are welcome via [GitHub Issues](https://github.com/techarm/quick-mark/issues).
-
-Pull requests are also welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-## License
+## ライセンス
 
 [MIT](LICENSE)
