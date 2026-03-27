@@ -94,10 +94,18 @@ export function Toolbar({
           border: '1px solid var(--border-subtle)',
         }}
       >
-        <ViewToggle active={viewMode === 'list'} onClick={() => setViewMode('list')} label="リスト表示">
+        <ViewToggle
+          active={viewMode === 'list'}
+          onClick={() => setViewMode('list')}
+          label="リスト表示"
+        >
           <List size={15} />
         </ViewToggle>
-        <ViewToggle active={viewMode === 'card'} onClick={() => setViewMode('card')} label="カード表示">
+        <ViewToggle
+          active={viewMode === 'card'}
+          onClick={() => setViewMode('card')}
+          label="カード表示"
+        >
           <LayoutGrid size={15} />
         </ViewToggle>
       </div>

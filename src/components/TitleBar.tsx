@@ -1,5 +1,5 @@
+import { Minus, Moon, Square, Sun, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Sun, Moon, Minus, Square, X } from 'lucide-react';
 import { useUIStore } from '../stores/ui.store';
 
 export function TitleBar() {
@@ -59,6 +59,7 @@ export function TitleBar() {
 
       {/* テーマ切替ボタン（Windowsではウィンドウ操作ボタンの左に配置） */}
       <button
+        type="button"
         onClick={toggleTheme}
         title={theme === 'dark' ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}
         aria-label={theme === 'dark' ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}
@@ -72,6 +73,7 @@ export function TitleBar() {
       {isWindows && (
         <div style={{ position: 'absolute', right: 0, top: 0, display: 'flex', height: '100%' }}>
           <button
+            type="button"
             onClick={handleMinimize}
             className="win-titlebar-btn"
             aria-label="最小化"
@@ -79,6 +81,7 @@ export function TitleBar() {
             <Minus size={14} />
           </button>
           <button
+            type="button"
             onClick={handleMaximize}
             className="win-titlebar-btn"
             aria-label="最大化"
@@ -86,6 +89,7 @@ export function TitleBar() {
             <Square size={12} />
           </button>
           <button
+            type="button"
             onClick={handleClose}
             className="win-titlebar-btn win-titlebar-btn-close"
             aria-label="閉じる"

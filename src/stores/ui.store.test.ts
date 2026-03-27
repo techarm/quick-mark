@@ -5,7 +5,10 @@ vi.stubGlobal('localStorage', {
   getItem: vi.fn(() => null),
   setItem: vi.fn(),
 });
-vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })));
+vi.stubGlobal(
+  'matchMedia',
+  vi.fn(() => ({ matches: true })),
+);
 
 const { useUIStore } = await import('./ui.store');
 

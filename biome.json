@@ -27,6 +27,9 @@
         "noLabelWithoutControl": "off",
         "useSemanticElements": "off",
         "noStaticElementInteractions": "off"
+      },
+      "complexity": {
+        "noImportantStyles": "off"
       }
     }
   },

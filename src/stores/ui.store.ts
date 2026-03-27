@@ -48,7 +48,6 @@ interface UIState {
   // 詳細パネル
   detailPanelOpen: boolean;
   setDetailPanelOpen: (open: boolean) => void;
-
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -97,5 +96,4 @@ export const useUIStore = create<UIState>((set) => ({
 
   detailPanelOpen: false,
   setDetailPanelOpen: (open) => set({ detailPanelOpen: open }),
-
 }));

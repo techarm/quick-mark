@@ -141,7 +141,8 @@ export function LinkList({ links, onOpen, onEdit, onDelete, onTogglePin }: LinkL
             >
               右上の「追加」ボタンまたは
               <span className="kbd" style={{ margin: '0 4px' }}>
-                {modKey}{shiftKey}A
+                {modKey}
+                {shiftKey}A
               </span>
               で追加
             </p>
@@ -237,7 +238,12 @@ function LinkRowMenu({
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content className="dropdown-menu-content" sideOffset={4} align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
+        <DropdownMenu.Content
+          className="dropdown-menu-content"
+          sideOffset={4}
+          align="end"
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
           <DropdownMenu.Item className="dropdown-menu-item" onSelect={withFlag(onOpen)}>
             <ExternalLink size={14} />
             ブラウザで開く
@@ -581,4 +587,3 @@ function LinkCard({
     </div>
   );
 }
-
