@@ -56,6 +56,12 @@ bun tauri build
 | `Cmd/Ctrl+A` | Select all links |
 | `Escape` | Deselect / Close |
 
+## Contributing
+
+Bug reports and feature requests are welcome via [GitHub Issues](https://github.com/techarm/quick-mark/issues).
+
+Pull requests are also welcome. For major changes, please open an issue first to discuss what you would like to change.
+
 ## License
 
 [MIT](LICENSE)
