@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
-use crate::commands::browser::extract_domain;
+use crate::commands::browser::{extract_domain, fetch_favicon_as_base64};
 use crate::db::AppDb;
 
 /// URLを検証する。http/httpsスキームのみ許可。
@@ -414,7 +414,7 @@ pub fn cleanup_expired_links(
     Ok(deleted as i64)
 }
 
-/// favicon_urlが空のリンクIDリストを取得
+/// favicon未取得（空・NULL・URLベース）のリンクIDリストを取得
 #[tauri::command]
 pub fn get_links_without_favicon(
     db: State<'_, Arc<Mutex<AppDb>>>,
@@ -422,8 +422,9 @@ pub fn get_links_without_favicon(
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
+    // base64データURIでないものも再取得対象にする
     let mut stmt = conn
-        .prepare("SELECT id, url FROM links WHERE favicon_url IS NULL OR favicon_url = ''")
+        .prepare("SELECT id, url FROM links WHERE favicon_url IS NULL OR favicon_url = '' OR favicon_url NOT LIKE 'data:%'")
         .map_err(|e| e.to_string())?;
 
     let links = stmt
@@ -454,7 +455,7 @@ pub fn refresh_single_favicon(
     Ok(())
 }
 
-/// 後方互換: 簡易版（Google Favicon APIのみ）
+/// 後方互換: 簡易版（Google Favicon APIのみ、base64で保存）
 #[tauri::command]
 pub fn refresh_favicons(
     db: State<'_, Arc<Mutex<AppDb>>>,
@@ -475,13 +476,15 @@ pub fn refresh_favicons(
     let mut updated = 0i64;
     for (id, url) in &links {
         let domain = extract_domain(url);
-        let favicon_url = format!("https://www.google.com/s2/favicons?domain={}&sz=32", domain);
-        conn.execute(
-            "UPDATE links SET favicon_url = ?1 WHERE id = ?2",
-            params![favicon_url, id],
-        )
-        .map_err(|e| e.to_string())?;
-        updated += 1;
+        let favicon_data = fetch_favicon_as_base64(&domain);
+        if !favicon_data.is_empty() {
+            conn.execute(
+                "UPDATE links SET favicon_url = ?1 WHERE id = ?2",
+                params![favicon_data, id],
+            )
+            .map_err(|e| e.to_string())?;
+            updated += 1;
+        }
     }
 
     Ok(updated)
