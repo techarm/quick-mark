@@ -15,6 +15,7 @@ import { Toolbar } from './components/main/Toolbar';
 import { SettingsDialog } from './components/SettingsDialog';
 import { TitleBar } from './components/TitleBar';
 import * as commands from './lib/commands';
+import { refreshFavicons } from './lib/favicon';
 import type {
   Category,
   CreateCategoryInput,
@@ -202,41 +203,7 @@ function App() {
   // バックグラウンドでfaviconを取得（同一ドメインはキャッシュ活用）
   const refreshFaviconsBackground = useCallback(async () => {
     try {
-      const missingLinks = await commands.getLinksWithoutFavicon();
-      if (missingLinks.length === 0) return;
-
-      const BATCH_SIZE = 5;
-      let processed = 0;
-      const domainCache = new Map<string, string>();
-
-      for (const [id, url] of missingLinks) {
-        try {
-          let faviconUrl: string;
-          const domain = new URL(url).hostname;
-
-          // 同一ドメインのキャッシュがあればHTTPリクエスト不要
-          if (domainCache.has(domain)) {
-            faviconUrl = domainCache.get(domain)!;
-          } else {
-            const info = await commands.fetchUrlInfo(url);
-            faviconUrl =
-              info.favicon_url || `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-            domainCache.set(domain, faviconUrl);
-          }
-
-          await commands.refreshSingleFavicon(id, faviconUrl);
-        } catch {
-          // 個別失敗は無視して次へ
-        }
-        processed++;
-        if (processed % BATCH_SIZE === 0) {
-          loadLinks();
-          await new Promise((r) => setTimeout(r, 100));
-        }
-      }
-      if (processed % BATCH_SIZE !== 0) {
-        loadLinks();
-      }
+      await refreshFavicons({ onBatchComplete: loadLinks });
     } catch (err) {
       console.error('Background favicon refresh failed:', err);
     }
@@ -798,8 +765,6 @@ function App() {
         onComplete={() => {
           loadLinks();
           loadCategories();
-          // バックグラウンドでfaviconを1件ずつ取得
-          refreshFaviconsBackground();
         }}
       />
 

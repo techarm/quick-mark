@@ -1,10 +1,11 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
-import { AlertTriangle, CheckCircle, FileUp, Loader2, Upload, X } from 'lucide-react';
-import { useState } from 'react';
+import { AlertTriangle, CheckCircle, FileUp, Image, Loader2, Upload, X } from 'lucide-react';
+import { useRef, useState } from 'react';
 import type { ImportItem, ImportResult } from '../lib/commands';
 import * as commands from '../lib/commands';
+import { refreshFavicons } from '../lib/favicon';
 
 interface ImportDialogProps {
   open: boolean;
@@ -12,7 +13,12 @@ interface ImportDialogProps {
   onComplete: () => void;
 }
 
-type ImportState = 'idle' | 'parsing' | 'preview' | 'importing' | 'done';
+type ImportState = 'idle' | 'parsing' | 'preview' | 'importing' | 'done' | 'fetching-icons';
+
+interface FaviconProgress {
+  current: number;
+  total: number;
+}
 
 export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogProps) {
   const [state, setState] = useState<ImportState>('idle');
@@ -20,6 +26,8 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [duplicateUrls, setDuplicateUrls] = useState<Set<string>>(new Set());
+  const [faviconProgress, setFaviconProgress] = useState<FaviconProgress>({ current: 0, total: 0 });
+  const cancelledRef = useRef(false);
 
   const handleSelectFile = async () => {
     try {
@@ -77,12 +85,36 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
     }
   };
 
+  const handleFetchFavicons = async () => {
+    setState('fetching-icons');
+    cancelledRef.current = false;
+
+    try {
+      await refreshFavicons({
+        onProgress: (current, total) => setFaviconProgress({ current, total }),
+        onBatchComplete: onComplete,
+        isCancelled: () => cancelledRef.current,
+      });
+    } catch (err) {
+      console.error('Favicon fetch failed:', err);
+    }
+
+    handleClose();
+  };
+
+  const handleSkipFavicons = () => {
+    cancelledRef.current = true;
+    handleClose();
+  };
+
   const handleClose = () => {
+    cancelledRef.current = true;
     setState('idle');
     setItems([]);
     setResult(null);
     setError(null);
     setDuplicateUrls(new Set());
+    setFaviconProgress({ current: 0, total: 0 });
     onOpenChange(false);
   };
 
@@ -135,11 +167,13 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
               </div>
               ブックマークをインポート
             </Dialog.Title>
-            <Dialog.Close asChild>
-              <button type="button" className="dialog-close-btn">
-                <X size={15} />
-              </button>
-            </Dialog.Close>
+            {state !== 'fetching-icons' && (
+              <Dialog.Close asChild>
+                <button type="button" className="dialog-close-btn">
+                  <X size={15} />
+                </button>
+              </Dialog.Close>
+            )}
           </div>
 
           {/* コンテンツ */}
@@ -370,13 +404,62 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
               </div>
             )}
 
+            {state === 'fetching-icons' && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 16,
+                  padding: '32px 0',
+                }}
+              >
+                <Image size={32} style={{ color: 'var(--accent-primary)' }} />
+                <div style={{ textAlign: 'center' }}>
+                  <p
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 500,
+                      color: 'var(--text-primary)',
+                      marginBottom: 6,
+                    }}
+                  >
+                    アイコンを取得中...
+                  </p>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                    {faviconProgress.current} / {faviconProgress.total}
+                  </p>
+                </div>
+                {/* プログレスバー */}
+                <div
+                  style={{
+                    width: '80%',
+                    height: 6,
+                    borderRadius: 3,
+                    background: 'var(--bg-elevated)',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${faviconProgress.total > 0 ? (faviconProgress.current / faviconProgress.total) * 100 : 0}%`,
+                      height: '100%',
+                      borderRadius: 3,
+                      background: 'var(--accent-primary)',
+                      transition: 'width 200ms ease',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
             {error && (
               <p style={{ marginTop: 12, fontSize: 12, color: 'var(--accent-danger)' }}>{error}</p>
             )}
           </div>
 
           {/* フッター */}
-          {(state === 'preview' || state === 'done') && (
+          {(state === 'preview' || state === 'done' || state === 'fetching-icons') && (
             <div className="dialog-footer">
               {state === 'preview' && (
                 <>
@@ -389,8 +472,18 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
                 </>
               )}
               {state === 'done' && (
-                <button type="button" onClick={handleClose} className="btn btn-primary">
-                  閉じる
+                <>
+                  <button type="button" onClick={handleClose} className="btn btn-ghost">
+                    閉じる
+                  </button>
+                  <button type="button" onClick={handleFetchFavicons} className="btn btn-primary">
+                    アイコンを取得
+                  </button>
+                </>
+              )}
+              {state === 'fetching-icons' && (
+                <button type="button" onClick={handleSkipFavicons} className="btn btn-ghost">
+                  スキップ
                 </button>
               )}
             </div>
