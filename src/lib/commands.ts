@@ -52,6 +52,18 @@ export async function cleanupExpiredLinks(): Promise<number> {
   return invoke('cleanup_expired_links');
 }
 
+export interface LinkCounts {
+  all: number;
+  recent: number;
+  temporary: number;
+  expired: number;
+  pinned: number;
+}
+
+export async function getLinkCounts(): Promise<LinkCounts> {
+  return invoke('get_link_counts');
+}
+
 export interface UrlInfo {
   title: string;
   description: string;

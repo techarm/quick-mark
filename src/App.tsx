@@ -51,6 +51,13 @@ function App() {
   const [links, setLinks] = useState<Link[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
+  const [linkCounts, setLinkCounts] = useState<commands.LinkCounts>({
+    all: 0,
+    recent: 0,
+    temporary: 0,
+    expired: 0,
+    pinned: 0,
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -111,6 +118,8 @@ function App() {
       toast.error('リンクの読み込みに失敗しました');
       setLinks([]);
     }
+    // カウントも常に最新化
+    commands.getLinkCounts().then(setLinkCounts).catch(console.error);
   }, [searchQuery, activeFilter, activeCategoryId]);
 
   const loadLinksRef = useRef(loadLinks);
@@ -591,16 +600,9 @@ function App() {
     [],
   );
 
-  // リンクカウントを計算
-  const now = new Date();
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const linkCounts = {
-    all: links.length,
-    recent: links.filter((l) => new Date(l.created_at) >= sevenDaysAgo).length,
-    temporary: links.filter((l) => l.is_temporary).length,
-    expired: links.filter((l) => l.is_temporary && l.expires_at && new Date(l.expires_at) < now)
-      .length,
-    pinned: links.filter((l) => l.is_pinned).length,
+  // サイドバー用カウント（DB由来 + 認証情報）
+  const sidebarCounts = {
+    ...linkCounts,
     credentials: credentials.length,
   };
 
@@ -623,7 +625,7 @@ function App() {
         >
           <Sidebar
             categories={categories}
-            linkCounts={linkCounts}
+            linkCounts={sidebarCounts}
             onAddCategory={handleAddCategory}
             onEditCategory={handleEditCategory}
             onDeleteCategory={handleDeleteCategory}

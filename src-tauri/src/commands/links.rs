@@ -414,6 +414,37 @@ pub fn cleanup_expired_links(
     Ok(deleted as i64)
 }
 
+/// スマートフォルダ用のリンクカウントを取得（フィルタに依存しない）
+#[derive(Debug, Serialize)]
+pub struct LinkCounts {
+    pub all: i64,
+    pub recent: i64,
+    pub temporary: i64,
+    pub expired: i64,
+    pub pinned: i64,
+}
+
+#[tauri::command]
+pub fn get_link_counts(
+    db: State<'_, Arc<Mutex<AppDb>>>,
+) -> Result<LinkCounts, String> {
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
+    let conn = &db.conn;
+
+    let count = |sql: &str| -> Result<i64, String> {
+        conn.query_row(sql, [], |row| row.get(0))
+            .map_err(|e| e.to_string())
+    };
+
+    Ok(LinkCounts {
+        all: count("SELECT COUNT(*) FROM links")?,
+        recent: count("SELECT COUNT(*) FROM links WHERE created_at >= datetime('now', '-7 days')")?,
+        temporary: count("SELECT COUNT(*) FROM links WHERE is_temporary = 1")?,
+        expired: count("SELECT COUNT(*) FROM links WHERE is_temporary = 1 AND expires_at IS NOT NULL AND expires_at < datetime('now')")?,
+        pinned: count("SELECT COUNT(*) FROM links WHERE is_pinned = 1")?,
+    })
+}
+
 /// favicon未取得（空・NULL・URLベース）のリンクIDリストを取得
 #[tauri::command]
 pub fn get_links_without_favicon(

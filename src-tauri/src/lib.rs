@@ -93,6 +93,7 @@ pub fn run() {
             search_links,
             open_link,
             cleanup_expired_links,
+            get_link_counts,
             get_links_without_favicon,
             refresh_single_favicon,
             move_links_to_category,
