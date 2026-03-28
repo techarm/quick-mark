@@ -26,6 +26,15 @@ fn ensure_api_token(app_data_dir: &std::path::Path) -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+fn get_api_token(app_handle: tauri::AppHandle) -> Result<String, String> {
+    let app_data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+    ensure_api_token(&app_data_dir)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -111,6 +120,8 @@ pub fn run() {
             copy_credential_password,
             copy_credential_field,
             clear_clipboard,
+            // 設定
+            get_api_token,
         ])
         .on_window_event(|window, event| {
             match event {

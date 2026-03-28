@@ -12,10 +12,10 @@ import {
   Sun,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import * as commands from '../lib/commands';
-import { modKey, shiftKey } from '../lib/utils';
+import { isMac, modKey, shiftKey } from '../lib/utils';
 import { useUIStore } from '../stores/ui.store';
 
 type SettingsTab = 'general' | 'appearance' | 'shortcuts' | 'about';
@@ -257,12 +257,102 @@ function ThemeCard({
   );
 }
 
+/** アプリ内で使用されているショートカット（Tauri形式） */
+const IN_APP_SHORTCUTS: { shortcut: string; label: string }[] = [
+  { shortcut: 'CommandOrControl+K', label: '検索ウィンドウを開く' },
+  { shortcut: 'CommandOrControl+Shift+A', label: 'リンクを追加' },
+  { shortcut: 'CommandOrControl+A', label: 'すべて選択' },
+];
+
+/** 新しいショートカットがアプリ内ショートカットと競合するかチェック */
+function checkInAppConflict(shortcut: string): string | null {
+  const normalize = (s: string) =>
+    s
+      .split('+')
+      .map((p) => p.toLowerCase())
+      .sort()
+      .join('+');
+  const normalized = normalize(shortcut);
+  for (const entry of IN_APP_SHORTCUTS) {
+    if (normalize(entry.shortcut) === normalized) {
+      return entry.label;
+    }
+  }
+  return null;
+}
+
+/** Tauri形式のショートカット文字列を表示用キー配列に変換 */
+function shortcutToDisplayKeys(shortcut: string): string[] {
+  return shortcut.split('+').map((part) => {
+    switch (part) {
+      case 'CommandOrControl':
+        return isMac ? '⌘' : 'Ctrl';
+      case 'Control':
+        return isMac ? '⌃' : 'Ctrl';
+      case 'Super':
+        return isMac ? '⌘' : 'Win';
+      case 'Shift':
+        return isMac ? '⇧' : 'Shift';
+      case 'Alt':
+        return isMac ? '⌥' : 'Alt';
+      default:
+        return part;
+    }
+  });
+}
+
+/** KeyboardEventからTauri形式のショートカット文字列を生成 */
+function keyEventToShortcut(e: React.KeyboardEvent): string | null {
+  const key = e.key;
+
+  // 修飾キーのみは無視
+  if (['Control', 'Meta', 'Shift', 'Alt'].includes(key)) return null;
+
+  // プラットフォームに応じて修飾キーを正しく識別
+  // Mac: Cmd → CommandOrControl, Ctrl → Control
+  // Win: Ctrl → CommandOrControl, Win → Super
+  const parts: string[] = [];
+  if (isMac) {
+    if (e.metaKey) parts.push('CommandOrControl');
+    if (e.ctrlKey) parts.push('Control');
+  } else {
+    if (e.ctrlKey) parts.push('CommandOrControl');
+    if (e.metaKey) parts.push('Super');
+  }
+  if (e.shiftKey) parts.push('Shift');
+  if (e.altKey) parts.push('Alt');
+
+  // キー名をTauri形式に正規化
+  let keyName: string;
+  if (key === ' ') {
+    keyName = 'Space';
+  } else if (key.length === 1) {
+    keyName = key.toUpperCase();
+  } else {
+    // F1-F24, ArrowUp, etc.
+    keyName = key;
+  }
+
+  // 修飾キーなしはファンクションキー(F1-F12)のみ許可（通常キー単体はグローバルとして危険）
+  if (parts.length === 0 && !/^F([1-9]|1[0-2])$/.test(keyName)) return null;
+
+  parts.push(keyName);
+  return parts.join('+');
+}
+
 function ShortcutsTab() {
+  const globalShortcut = useUIStore((s) => s.globalShortcut);
+  const setGlobalShortcut = useUIStore((s) => s.setGlobalShortcut);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <section>
         <SectionTitle>グローバル</SectionTitle>
-        <ShortcutRow action="検索ウィンドウの切替" keys={[modKey, shiftKey, 'Space']} />
+        <GlobalShortcutRow
+          action="検索ウィンドウの切替"
+          shortcut={globalShortcut}
+          onChangeShortcut={setGlobalShortcut}
+        />
       </section>
 
       <section>
@@ -280,6 +370,116 @@ function ShortcutsTab() {
         <ShortcutRow action="認証情報モード切替" keys={['@']} />
         <ShortcutRow action="クエリクリア / 閉じる" keys={['Esc']} />
       </section>
+    </div>
+  );
+}
+
+function GlobalShortcutRow({
+  action,
+  shortcut,
+  onChangeShortcut,
+}: {
+  action: string;
+  shortcut: string;
+  onChangeShortcut: (shortcut: string) => void;
+}) {
+  const [recording, setRecording] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  const displayKeys = shortcutToDisplayKeys(shortcut);
+
+  const verifyAndApply = async (newShortcut: string) => {
+    setRecording(false);
+
+    // アプリ内ショートカットとの競合チェック
+    const conflict = checkInAppConflict(newShortcut);
+    if (conflict) {
+      toast.error(`「${conflict}」と競合しています`);
+      return;
+    }
+
+    // OS レベルで登録可能か検証
+    try {
+      const { register, unregisterAll } = await import('@tauri-apps/plugin-global-shortcut');
+      await unregisterAll();
+      await register(newShortcut, () => {});
+      // 検証成功 → 解除してストア更新（App.tsx の useEffect が再登録する）
+      await unregisterAll();
+      onChangeShortcut(newShortcut);
+      toast.success('ショートカットを変更しました');
+    } catch {
+      toast.error('このショートカットは登録できません（OS側で競合の可能性）');
+    }
+  };
+
+  const handleStartRecording = () => {
+    setRecording(true);
+    // フォーカスをボタンに当ててキーイベントを受け取れるようにする
+    requestAnimationFrame(() => btnRef.current?.focus());
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!recording) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Escでキャンセル
+    if (e.key === 'Escape') {
+      setRecording(false);
+      return;
+    }
+
+    const newShortcut = keyEventToShortcut(e);
+    if (newShortcut) {
+      // 登録可能か事前検証してからストアを更新
+      verifyAndApply(newShortcut);
+    }
+  };
+
+  const handleBlur = () => {
+    setRecording(false);
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '6px 0',
+      }}
+    >
+      <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{action}</span>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={handleStartRecording}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+        title="クリックしてショートカットを変更"
+        style={{
+          display: 'flex',
+          gap: 4,
+          alignItems: 'center',
+          padding: '4px 8px',
+          borderRadius: 'var(--radius-md)',
+          border: recording ? '1px solid var(--accent-primary)' : '1px solid transparent',
+          background: recording ? 'rgba(226, 80, 80, 0.08)' : 'transparent',
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          transition: 'all 150ms ease',
+        }}
+      >
+        {recording ? (
+          <span style={{ fontSize: 12, color: 'var(--accent-primary)' }}>キーを入力...</span>
+        ) : (
+          displayKeys.map((key) => (
+            <kbd key={key} className="kbd">
+              {key}
+            </kbd>
+          ))
+        )}
+      </button>
     </div>
   );
 }

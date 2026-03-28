@@ -1,10 +1,11 @@
-import { Minus, Moon, Square, Sun, X } from 'lucide-react';
+import { Minus, Settings, Square, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useUIStore } from '../stores/ui.store';
 
-export function TitleBar() {
-  const theme = useUIStore((s) => s.theme);
-  const toggleTheme = useUIStore((s) => s.toggleTheme);
+interface TitleBarProps {
+  onOpenSettings?: () => void;
+}
+
+export function TitleBar({ onOpenSettings }: TitleBarProps) {
   const [isWindows, setIsWindows] = useState(false);
 
   useEffect(() => {
@@ -57,16 +58,16 @@ export function TitleBar() {
         QuickMark
       </span>
 
-      {/* テーマ切替ボタン（Windowsではウィンドウ操作ボタンの左に配置） */}
+      {/* 設定ボタン（Windowsではウィンドウ操作ボタンの左に配置） */}
       <button
         type="button"
-        onClick={toggleTheme}
-        title={theme === 'dark' ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}
-        aria-label={theme === 'dark' ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}
+        onClick={onOpenSettings}
+        title="設定"
+        aria-label="設定"
         className="titlebar-icon-btn"
         style={{ position: 'absolute', right: isWindows ? 108 : 12 }}
       >
-        {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+        <Settings size={14} />
       </button>
 
       {/* Windows: ウィンドウ操作ボタン */}

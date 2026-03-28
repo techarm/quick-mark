@@ -12,6 +12,7 @@ import { LinkDetail } from './components/main/LinkDetail';
 import { LinkList } from './components/main/LinkList';
 import { Sidebar } from './components/main/Sidebar';
 import { Toolbar } from './components/main/Toolbar';
+import { SettingsDialog } from './components/SettingsDialog';
 import { TitleBar } from './components/TitleBar';
 import * as commands from './lib/commands';
 import type {
@@ -52,6 +53,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
   // リンク編集
   const [editingLink, setEditingLink] = useState<Link | null>(null);
@@ -246,41 +248,39 @@ function App() {
     refreshFaviconsBackground();
   }, [refreshFaviconsBackground]);
 
-  // OS-level グローバルショートカット（Cmd+Shift+Space）→ 独立検索ウィンドウ
+  // OS-level グローバルショートカット → 独立検索ウィンドウ
+  const globalShortcut = useUIStore((s) => s.globalShortcut);
+
   useEffect(() => {
-    let registered = false;
+    let cancelled = false;
 
     async function setupGlobalShortcut() {
       try {
-        const { register, unregister } = await import('@tauri-apps/plugin-global-shortcut');
+        const { register, unregisterAll } = await import('@tauri-apps/plugin-global-shortcut');
+        if (cancelled) return;
 
-        try {
-          await unregister('CommandOrControl+Shift+Space');
-        } catch {
-          // 未登録の場合は無視
-        }
+        // 既存のショートカットをすべて解除してからクリーンに登録
+        await unregisterAll();
+        if (cancelled) return;
 
-        await register('CommandOrControl+Shift+Space', async (event) => {
+        await register(globalShortcut, async (event) => {
           if (event.state === 'Released') return;
           await toggleSearchWindow();
         });
-
-        registered = true;
       } catch (err) {
-        console.warn('Global shortcut not available:', err);
+        console.warn('Global shortcut registration failed:', err);
       }
     }
 
     setupGlobalShortcut();
 
     return () => {
-      if (registered) {
-        import('@tauri-apps/plugin-global-shortcut')
-          .then(({ unregister }) => unregister('CommandOrControl+Shift+Space'))
-          .catch(() => {});
-      }
+      cancelled = true;
+      import('@tauri-apps/plugin-global-shortcut')
+        .then(({ unregisterAll }) => unregisterAll())
+        .catch(() => {});
     };
-  }, []);
+  }, [globalShortcut]);
 
   // アプリ内キーボードショートカット
   useEffect(() => {
@@ -642,7 +642,7 @@ function App() {
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--bg-base)' }}>
       {/* タイトルバー（ウィンドウ全体の上部） */}
-      <TitleBar />
+      <TitleBar onOpenSettings={() => setSettingsDialogOpen(true)} />
 
       <div className="flex flex-1 overflow-hidden">
         {/* サイドバー */}
@@ -784,6 +784,9 @@ function App() {
         credential={editingCredential}
         onSubmit={handleCredentialSubmit}
       />
+
+      {/* 設定ダイアログ */}
+      <SettingsDialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen} />
 
       {/* インポートダイアログ */}
       <ImportDialog

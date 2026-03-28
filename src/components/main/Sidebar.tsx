@@ -195,18 +195,6 @@ export function Sidebar({
           </nav>
         )}
       </div>
-      <div
-        style={{
-          marginTop: 'auto',
-          padding: '8px 12px',
-          fontSize: 11,
-          color: 'var(--text-tertiary)',
-          userSelect: 'none',
-          flexShrink: 0,
-        }}
-      >
-        v{__APP_VERSION__}
-      </div>
     </div>
   );
 }
