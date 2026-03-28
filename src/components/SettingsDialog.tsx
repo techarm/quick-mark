@@ -2,6 +2,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import {
   Check,
   Copy,
+  Download,
   Eye,
   EyeOff,
   Info,
@@ -10,6 +11,7 @@ import {
   Palette,
   Settings,
   Sun,
+  Upload,
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -30,9 +32,11 @@ const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onImport: () => void;
+  onExport: () => void;
 }
 
-export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
+export function SettingsDialog({ open, onOpenChange, onImport, onExport }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
   return (
@@ -86,7 +90,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
             {/* 右コンテンツ */}
             <div style={{ flex: 1, padding: 20, overflow: 'auto' }}>
-              {activeTab === 'general' && <GeneralTab />}
+              {activeTab === 'general' && <GeneralTab onImport={onImport} onExport={onExport} />}
               {activeTab === 'appearance' && <AppearanceTab />}
               {activeTab === 'shortcuts' && <ShortcutsTab />}
               {activeTab === 'about' && <AboutTab />}
@@ -98,7 +102,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   );
 }
 
-function GeneralTab() {
+function GeneralTab({ onImport, onExport }: { onImport: () => void; onExport: () => void }) {
   const [apiToken, setApiToken] = useState<string | null>(null);
   const [tokenVisible, setTokenVisible] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -184,6 +188,41 @@ function GeneralTab() {
             ) : (
               <Copy size={15} />
             )}
+          </button>
+        </div>
+      </section>
+
+      {/* データ管理 */}
+      <section>
+        <SectionTitle>データ管理</SectionTitle>
+        <p
+          style={{
+            fontSize: 12,
+            color: 'var(--text-tertiary)',
+            marginBottom: 10,
+            lineHeight: 1.6,
+          }}
+        >
+          ブックマークデータのインポート・エクスポートができます。
+        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={onImport}
+            style={{ gap: 6, fontSize: 13 }}
+          >
+            <Upload size={15} />
+            インポート
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={onExport}
+            style={{ gap: 6, fontSize: 13 }}
+          >
+            <Download size={15} />
+            エクスポート
           </button>
         </div>
       </section>

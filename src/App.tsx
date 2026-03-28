@@ -721,8 +721,6 @@ function App() {
               ) : (
                 <Toolbar
                   onAddLink={() => setAddDialogOpen(true)}
-                  onImport={() => setImportDialogOpen(true)}
-                  onExport={handleExport}
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
                 />
@@ -786,7 +784,12 @@ function App() {
       />
 
       {/* 設定ダイアログ */}
-      <SettingsDialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen} />
+      <SettingsDialog
+        open={settingsDialogOpen}
+        onOpenChange={setSettingsDialogOpen}
+        onImport={() => setImportDialogOpen(true)}
+        onExport={handleExport}
+      />
 
       {/* インポートダイアログ */}
       <ImportDialog
