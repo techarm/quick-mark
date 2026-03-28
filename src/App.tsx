@@ -98,28 +98,32 @@ function App() {
 
   // データの読み込み
   const loadLinks = useCallback(async () => {
-    try {
+    // リンク取得とカウント取得を並行実行
+    const linksPromise = (async () => {
       if (searchQuery.trim()) {
-        const results = await commands.searchLinks(searchQuery);
-        setLinks(results);
+        return commands.searchLinks(searchQuery);
       } else if (activeCategoryId) {
-        const results = await commands.getLinks(activeCategoryId);
-        setLinks(results);
+        return commands.getLinks(activeCategoryId);
       } else {
         const filter =
           activeFilter === 'all' || activeFilter === 'credentials'
             ? undefined
             : (activeFilter ?? undefined);
-        const results = await commands.getLinks(undefined, filter);
-        setLinks(results);
+        return commands.getLinks(undefined, filter);
       }
+    })();
+
+    const countsPromise = commands.getLinkCounts();
+
+    try {
+      const [results, counts] = await Promise.all([linksPromise, countsPromise]);
+      setLinks(results);
+      setLinkCounts(counts);
     } catch (err) {
       console.error('Failed to load links:', err);
       toast.error('リンクの読み込みに失敗しました');
       setLinks([]);
     }
-    // カウントも常に最新化
-    commands.getLinkCounts().then(setLinkCounts).catch(console.error);
   }, [searchQuery, activeFilter, activeCategoryId]);
 
   const loadLinksRef = useRef(loadLinks);
@@ -209,20 +213,13 @@ function App() {
     };
   }, []);
 
-  // バックグラウンドでfaviconを取得（同一ドメインはキャッシュ活用）
-  const refreshFaviconsBackground = useCallback(async () => {
-    try {
-      await refreshFavicons({ onBatchComplete: loadLinks });
-    } catch (err) {
-      console.error('Background favicon refresh failed:', err);
-    }
-  }, [loadLinks]);
-
-  // 起動時に期限切れリンクをクリーンアップ + favicon更新
+  // 起動時に期限切れリンクをクリーンアップ + favicon未取得分を取得（初回のみ）
   useEffect(() => {
     commands.cleanupExpiredLinks().catch(console.error);
-    refreshFaviconsBackground();
-  }, [refreshFaviconsBackground]);
+    refreshFavicons()
+      .then(() => loadLinksRef.current())
+      .catch((err) => console.error('Background favicon refresh failed:', err));
+  }, []);
 
   // OS-level グローバルショートカット → 独立検索ウィンドウ
   const globalShortcut = useUIStore((s) => s.globalShortcut);
