@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "マイナー・パッチ更新をまとめる（npm）",
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchManagers": ["npm"],
+      "groupName": "npm minor/patch updates",
+      "automerge": true
+    },
+    {
+      "description": "マイナー・パッチ更新をまとめる（Rust）",
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchManagers": ["cargo"],
+      "groupName": "rust minor/patch updates",
+      "automerge": true
+    },
+    {
+      "description": "マイナー・パッチ更新をまとめる（GitHub Actions）",
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions minor/patch updates",
+      "automerge": true
+    }
+  ]
+}

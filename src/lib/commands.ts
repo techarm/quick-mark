@@ -197,3 +197,9 @@ export async function copyCredentialField(id: string, field: string): Promise<vo
 export async function clearClipboard(): Promise<void> {
   return invoke('clear_clipboard');
 }
+
+// === 設定 ===
+
+export async function getApiToken(): Promise<string> {
+  return invoke('get_api_token');
+}

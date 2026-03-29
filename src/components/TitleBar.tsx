@@ -1,10 +1,11 @@
+import { Minus, Settings, Square, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Sun, Moon, Minus, Square, X } from 'lucide-react';
-import { useUIStore } from '../stores/ui.store';
 
-export function TitleBar() {
-  const theme = useUIStore((s) => s.theme);
-  const toggleTheme = useUIStore((s) => s.toggleTheme);
+interface TitleBarProps {
+  onOpenSettings?: () => void;
+}
+
+export function TitleBar({ onOpenSettings }: TitleBarProps) {
   const [isWindows, setIsWindows] = useState(false);
 
   useEffect(() => {
@@ -52,21 +53,23 @@ export function TitleBar() {
         QuickMark
       </span>
 
-      {/* テーマ切替ボタン（Windowsではウィンドウ操作ボタンの左に配置） */}
+      {/* 設定ボタン（Windowsではウィンドウ操作ボタンの左に配置） */}
       <button
-        onClick={toggleTheme}
-        title={theme === 'dark' ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}
-        aria-label={theme === 'dark' ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}
+        type="button"
+        onClick={onOpenSettings}
+        title="設定"
+        aria-label="設定"
         className="titlebar-icon-btn"
         style={{ position: 'absolute', right: isWindows ? 108 : 12 }}
       >
-        {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+        <Settings size={14} />
       </button>
 
       {/* Windows: ウィンドウ操作ボタン */}
       {isWindows && (
         <div style={{ position: 'absolute', right: 0, top: 0, display: 'flex', height: '100%' }}>
           <button
+            type="button"
             onClick={handleMinimize}
             className="win-titlebar-btn"
             aria-label="最小化"
@@ -74,6 +77,7 @@ export function TitleBar() {
             <Minus size={14} />
           </button>
           <button
+            type="button"
             onClick={handleMaximize}
             className="win-titlebar-btn"
             aria-label="最大化"
@@ -81,6 +85,7 @@ export function TitleBar() {
             <Square size={12} />
           </button>
           <button
+            type="button"
             onClick={handleClose}
             className="win-titlebar-btn win-titlebar-btn-close"
             aria-label="閉じる"

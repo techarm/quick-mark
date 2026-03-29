@@ -76,7 +76,7 @@ export function Sidebar({
         flexDirection: 'column',
         flex: 1,
         overflow: 'hidden',
-        padding: '4px 10px 12px',
+        padding: '4px 10px 0',
       }}
     >
       {/* スマートフォルダ */}

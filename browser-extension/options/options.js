@@ -1,6 +1,25 @@
 const $ = (id) => document.getElementById(id);
 
+function getTokenPath() {
+  const isWindows = navigator.platform.indexOf("Win") !== -1;
+  return isWindows
+    ? "%APPDATA%\\dev.techarm.quickmark\\api_token"
+    : "~/Library/Application Support/dev.techarm.quickmark/api_token";
+}
+
+function renderTokenPathHint() {
+  const path = getTokenPath();
+  const container = $("token-path-hint");
+  container.innerHTML = `トークンは <code class="copyable" title="クリックでコピー">${path}</code> にあります`;
+  container.querySelector(".copyable").addEventListener("click", async () => {
+    await navigator.clipboard.writeText(path);
+    showStatus("success", "パスをコピーしました");
+  });
+}
+
 async function init() {
+  renderTokenPathHint();
+
   const config = await chrome.storage.local.get(["apiToken", "apiPort"]);
   $("api-token").value = config.apiToken || "";
   $("api-port").value = config.apiPort || 21579;

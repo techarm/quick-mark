@@ -12,8 +12,10 @@ import { LinkDetail } from './components/main/LinkDetail';
 import { LinkList } from './components/main/LinkList';
 import { Sidebar } from './components/main/Sidebar';
 import { Toolbar } from './components/main/Toolbar';
+import { SettingsDialog } from './components/SettingsDialog';
 import { TitleBar } from './components/TitleBar';
 import * as commands from './lib/commands';
+import { refreshFavicons } from './lib/favicon';
 import type {
   Category,
   CreateCategoryInput,
@@ -23,7 +25,7 @@ import type {
   Link,
   UpdateLinkInput,
 } from './lib/types';
-import { safeOpenUrl } from './lib/utils';
+import { isModKey, safeOpenUrl } from './lib/utils';
 import { useUIStore } from './stores/ui.store';
 
 // 独立検索ウィンドウのトグル（tauri.conf.jsonで事前定義済み）
@@ -52,6 +54,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
   // リンク編集
   const [editingLink, setEditingLink] = useState<Link | null>(null);
@@ -163,16 +166,25 @@ function App() {
             description: '30秒後にクリップボードをクリアします',
           });
         });
-        if (cancelled) { unlisten1(); return; }
+        if (cancelled) {
+          unlisten1();
+          return;
+        }
         unlisten2 = await listen('credential:clipboard-cleared', () => {
           toast.info('クリップボードをクリアしました');
         });
-        if (cancelled) { unlisten2(); return; }
+        if (cancelled) {
+          unlisten2();
+          return;
+        }
         unlisten3 = await listen('links:created-from-extension', () => {
           loadLinksRef.current();
           toast.success('ブラウザ拡張機能からリンクを保存しました');
         });
-        if (cancelled) { unlisten3(); return; }
+        if (cancelled) {
+          unlisten3();
+          return;
+        }
       } catch {
         // ブラウザ環境では無視
       }
@@ -191,41 +203,7 @@ function App() {
   // バックグラウンドでfaviconを取得（同一ドメインはキャッシュ活用）
   const refreshFaviconsBackground = useCallback(async () => {
     try {
-      const missingLinks = await commands.getLinksWithoutFavicon();
-      if (missingLinks.length === 0) return;
-
-      const BATCH_SIZE = 5;
-      let processed = 0;
-      const domainCache = new Map<string, string>();
-
-      for (const [id, url] of missingLinks) {
-        try {
-          let faviconUrl: string;
-          const domain = new URL(url).hostname;
-
-          // 同一ドメインのキャッシュがあればHTTPリクエスト不要
-          if (domainCache.has(domain)) {
-            faviconUrl = domainCache.get(domain)!;
-          } else {
-            const info = await commands.fetchUrlInfo(url);
-            faviconUrl =
-              info.favicon_url || `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-            domainCache.set(domain, faviconUrl);
-          }
-
-          await commands.refreshSingleFavicon(id, faviconUrl);
-        } catch {
-          // 個別失敗は無視して次へ
-        }
-        processed++;
-        if (processed % BATCH_SIZE === 0) {
-          loadLinks();
-          await new Promise((r) => setTimeout(r, 100));
-        }
-      }
-      if (processed % BATCH_SIZE !== 0) {
-        loadLinks();
-      }
+      await refreshFavicons({ onBatchComplete: loadLinks });
     } catch (err) {
       console.error('Background favicon refresh failed:', err);
     }
@@ -237,57 +215,55 @@ function App() {
     refreshFaviconsBackground();
   }, [refreshFaviconsBackground]);
 
-  // OS-level グローバルショートカット（Cmd+Shift+Space）→ 独立検索ウィンドウ
+  // OS-level グローバルショートカット → 独立検索ウィンドウ
+  const globalShortcut = useUIStore((s) => s.globalShortcut);
+
   useEffect(() => {
-    let registered = false;
+    let cancelled = false;
 
     async function setupGlobalShortcut() {
       try {
-        const { register, unregister } = await import('@tauri-apps/plugin-global-shortcut');
+        const { register, unregisterAll } = await import('@tauri-apps/plugin-global-shortcut');
+        if (cancelled) return;
 
-        try {
-          await unregister('CommandOrControl+Shift+Space');
-        } catch {
-          // 未登録の場合は無視
-        }
+        // 既存のショートカットをすべて解除してからクリーンに登録
+        await unregisterAll();
+        if (cancelled) return;
 
-        await register('CommandOrControl+Shift+Space', async (event) => {
+        await register(globalShortcut, async (event) => {
           if (event.state === 'Released') return;
           await toggleSearchWindow();
         });
-
-        registered = true;
       } catch (err) {
-        console.warn('Global shortcut not available:', err);
+        console.warn('Global shortcut registration failed:', err);
       }
     }
 
     setupGlobalShortcut();
 
     return () => {
-      if (registered) {
-        import('@tauri-apps/plugin-global-shortcut')
-          .then(({ unregister }) => unregister('CommandOrControl+Shift+Space'))
-          .catch(() => {});
-      }
+      cancelled = true;
+      import('@tauri-apps/plugin-global-shortcut')
+        .then(({ unregisterAll }) => unregisterAll())
+        .catch(() => {});
     };
-  }, []);
+  }, [globalShortcut]);
 
   // アプリ内キーボードショートカット
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd+K: 独立検索ウィンドウを開く
-      if (e.metaKey && e.key === 'k') {
+      // Cmd/Ctrl+K: 独立検索ウィンドウを開く
+      if (isModKey(e) && e.key === 'k') {
         e.preventDefault();
         toggleSearchWindow();
       }
-      // Cmd+Shift+A: リンク追加
-      if (e.metaKey && e.shiftKey && e.key === 'a') {
+      // Cmd/Ctrl+Shift+A: リンク追加
+      if (isModKey(e) && e.shiftKey && e.key === 'a') {
         e.preventDefault();
         setAddDialogOpen(true);
       }
-      // Cmd+A: リンク全選択（入力フォーカス中は除外）
-      if (e.metaKey && e.key === 'a' && !e.shiftKey) {
+      // Cmd/Ctrl+A: リンク全選択（入力フォーカス中は除外）
+      if (isModKey(e) && e.key === 'a' && !e.shiftKey) {
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
           e.preventDefault();
@@ -633,7 +609,7 @@ function App() {
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--bg-base)' }}>
       {/* タイトルバー（ウィンドウ全体の上部） */}
-      <TitleBar />
+      <TitleBar onOpenSettings={() => setSettingsDialogOpen(true)} />
 
       <div className="flex flex-1 overflow-hidden">
         {/* サイドバー */}
@@ -712,8 +688,6 @@ function App() {
               ) : (
                 <Toolbar
                   onAddLink={() => setAddDialogOpen(true)}
-                  onImport={() => setImportDialogOpen(true)}
-                  onExport={handleExport}
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
                 />
@@ -776,6 +750,14 @@ function App() {
         onSubmit={handleCredentialSubmit}
       />
 
+      {/* 設定ダイアログ */}
+      <SettingsDialog
+        open={settingsDialogOpen}
+        onOpenChange={setSettingsDialogOpen}
+        onImport={() => setImportDialogOpen(true)}
+        onExport={handleExport}
+      />
+
       {/* インポートダイアログ */}
       <ImportDialog
         open={importDialogOpen}
@@ -783,8 +765,6 @@ function App() {
         onComplete={() => {
           loadLinks();
           loadCategories();
-          // バックグラウンドでfaviconを1件ずつ取得
-          refreshFaviconsBackground();
         }}
       />
 

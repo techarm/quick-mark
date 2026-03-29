@@ -6,6 +6,20 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** macOSかどうかを判定 */
+export const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
+
+/** プラットフォームに応じた修飾キー名を返す */
+export const modKey = isMac ? '⌘' : 'Ctrl+';
+
+/** プラットフォームに応じたShiftキー表記を返す */
+export const shiftKey = isMac ? '⇧' : 'Shift+';
+
+/** metaKey(Mac) または ctrlKey(Windows) が押されているか */
+export function isModKey(e: KeyboardEvent): boolean {
+  return isMac ? e.metaKey : e.ctrlKey;
+}
+
 /** URLからドメイン名を取得。パース失敗時は元のURLを返す */
 export function getDomain(url: string): string {
   try {

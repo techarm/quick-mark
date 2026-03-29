@@ -3,6 +3,7 @@ mod db;
 mod server;
 
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tauri::{Manager, RunEvent, WindowEvent};
 
 use commands::browser::*;
@@ -26,8 +27,21 @@ fn ensure_api_token(app_data_dir: &std::path::Path) -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+fn get_api_token(app_handle: tauri::AppHandle) -> Result<String, String> {
+    let app_data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+    ensure_api_token(&app_data_dir)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 検索ウィンドウ非表示時刻を記録（Reopenイベントの誤発火防止用）
+    let search_hidden_at: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None));
+    let search_hidden_at_for_event = Arc::clone(&search_hidden_at);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -111,8 +125,10 @@ pub fn run() {
             copy_credential_password,
             copy_credential_field,
             clear_clipboard,
+            // 設定
+            get_api_token,
         ])
-        .on_window_event(|window, event| {
+        .on_window_event(move |window, event| {
             match event {
                 WindowEvent::CloseRequested { api, .. } => {
                     // macOS: メインウィンドウは閉じる代わりに非表示（Dockから再表示可能）
@@ -129,6 +145,7 @@ pub fn run() {
                     // 検索ウィンドウ: フォーカスを失ったら自動非表示（Spotlight風）
                     if !focused && window.label() == "search-palette" {
                         let _ = window.hide();
+                        *search_hidden_at_for_event.lock().unwrap() = Some(Instant::now());
                     }
                 }
                 _ => {}
@@ -136,13 +153,21 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|_app, _event| {
+        .run(move |_app, _event| {
             // macOS: Dockアイコンクリックでメインウィンドウを再表示
             #[cfg(target_os = "macos")]
             if let RunEvent::Reopen { .. } = _event {
-                if let Some(window) = _app.get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
+                // 検索ウィンドウ非表示から500ms以内は無視（フォーカス移動による誤発火防止）
+                let skip = search_hidden_at
+                    .lock()
+                    .unwrap()
+                    .map(|t| t.elapsed() < Duration::from_millis(500))
+                    .unwrap_or(false);
+                if !skip {
+                    if let Some(window) = _app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
                 }
             }
         });

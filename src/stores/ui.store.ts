@@ -15,6 +15,12 @@ function applyTheme(theme: Theme) {
   localStorage.setItem('quickmark-theme', theme);
 }
 
+const DEFAULT_GLOBAL_SHORTCUT = 'CommandOrControl+Shift+Space';
+
+function getInitialGlobalShortcut(): string {
+  return localStorage.getItem('quickmark-global-shortcut') || DEFAULT_GLOBAL_SHORTCUT;
+}
+
 interface UIState {
   // テーマ
   theme: Theme;
@@ -49,6 +55,9 @@ interface UIState {
   detailPanelOpen: boolean;
   setDetailPanelOpen: (open: boolean) => void;
 
+  // グローバルショートカット
+  globalShortcut: string;
+  setGlobalShortcut: (shortcut: string) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -98,4 +107,9 @@ export const useUIStore = create<UIState>((set) => ({
   detailPanelOpen: false,
   setDetailPanelOpen: (open) => set({ detailPanelOpen: open }),
 
+  globalShortcut: getInitialGlobalShortcut(),
+  setGlobalShortcut: (shortcut) => {
+    localStorage.setItem('quickmark-global-shortcut', shortcut);
+    set({ globalShortcut: shortcut });
+  },
 }));

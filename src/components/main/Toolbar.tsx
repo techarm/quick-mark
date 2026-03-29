@@ -1,21 +1,14 @@
-import { Download, LayoutGrid, List, Plus, Search, Upload, X } from 'lucide-react';
+import { LayoutGrid, List, Plus, Search, X } from 'lucide-react';
+import { modKey } from '../../lib/utils';
 import { useUIStore } from '../../stores/ui.store';
 
 interface ToolbarProps {
   onAddLink: () => void;
-  onImport?: () => void;
-  onExport?: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
 }
 
-export function Toolbar({
-  onAddLink,
-  onImport,
-  onExport,
-  searchQuery,
-  onSearchChange,
-}: ToolbarProps) {
+export function Toolbar({ onAddLink, searchQuery, onSearchChange }: ToolbarProps) {
   const { viewMode, setViewMode } = useUIStore();
 
   return (
@@ -47,7 +40,7 @@ export function Toolbar({
         <Search size={15} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
         <input
           type="text"
-          placeholder="リンクを検索...  ⌘K"
+          placeholder={`リンクを検索...  ${modKey}K`}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           style={{
@@ -93,49 +86,21 @@ export function Toolbar({
           border: '1px solid var(--border-subtle)',
         }}
       >
-        <ViewToggle active={viewMode === 'list'} onClick={() => setViewMode('list')} label="リスト表示">
+        <ViewToggle
+          active={viewMode === 'list'}
+          onClick={() => setViewMode('list')}
+          label="リスト表示"
+        >
           <List size={15} />
         </ViewToggle>
-        <ViewToggle active={viewMode === 'card'} onClick={() => setViewMode('card')} label="カード表示">
+        <ViewToggle
+          active={viewMode === 'card'}
+          onClick={() => setViewMode('card')}
+          label="カード表示"
+        >
           <LayoutGrid size={15} />
         </ViewToggle>
       </div>
-
-      {/* インポートボタン */}
-      {onImport && (
-        <button
-          type="button"
-          onClick={onImport}
-          className="btn btn-ghost"
-          style={{
-            height: 36,
-            padding: '0 10px',
-            flexShrink: 0,
-          }}
-          title="インポート"
-          aria-label="インポート"
-        >
-          <Upload size={15} />
-        </button>
-      )}
-
-      {/* エクスポートボタン */}
-      {onExport && (
-        <button
-          type="button"
-          onClick={onExport}
-          className="btn btn-ghost"
-          style={{
-            height: 36,
-            padding: '0 10px',
-            flexShrink: 0,
-          }}
-          title="エクスポート（バックアップ）"
-          aria-label="エクスポート"
-        >
-          <Download size={15} />
-        </button>
-      )}
 
       {/* 追加ボタン */}
       <button
