@@ -27,6 +27,7 @@ const baseLink: Link = {
   description: null,
   favicon_url: null,
   category_id: null,
+  workspace_id: null,
   is_temporary: false,
   expires_at: null,
   visit_count: 0,

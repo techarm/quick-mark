@@ -55,6 +55,10 @@ interface UIState {
   detailPanelOpen: boolean;
   setDetailPanelOpen: (open: boolean) => void;
 
+  // ワークスペース
+  activeWorkspaceId: string | null;
+  setActiveWorkspaceId: (id: string) => void;
+
   // グローバルショートカット
   globalShortcut: string;
   setGlobalShortcut: (shortcut: string) => void;
@@ -106,6 +110,17 @@ export const useUIStore = create<UIState>((set) => ({
 
   detailPanelOpen: false,
   setDetailPanelOpen: (open) => set({ detailPanelOpen: open }),
+
+  activeWorkspaceId: null,
+  setActiveWorkspaceId: (id) =>
+    set({
+      activeWorkspaceId: id,
+      activeFilter: 'all',
+      activeCategoryId: null,
+      selectedLinkId: null,
+      selectedLinkIds: new Set(),
+      detailPanelOpen: false,
+    }),
 
   globalShortcut: getInitialGlobalShortcut(),
   setGlobalShortcut: (shortcut) => {

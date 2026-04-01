@@ -122,6 +122,73 @@ fn run_migrations(conn: &Connection) -> Result<()> {
         "ALTER TABLE credentials ADD COLUMN last_used_at TEXT DEFAULT NULL",
     );
 
+    // マイグレーション: workspacesテーブル追加
+    conn.execute_batch(
+        "
+        CREATE TABLE IF NOT EXISTS workspaces (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            icon TEXT DEFAULT 'briefcase',
+            color TEXT DEFAULT '#6366F1',
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
+        ",
+    )?;
+
+    // マイグレーション: workspace_idカラム追加（既存DB対応）
+    let _ = conn.execute_batch(
+        "ALTER TABLE categories ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)",
+    );
+    let _ = conn.execute_batch(
+        "ALTER TABLE links ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)",
+    );
+    let _ = conn.execute_batch(
+        "ALTER TABLE credentials ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)",
+    );
+
+    conn.execute_batch(
+        "
+        CREATE INDEX IF NOT EXISTS idx_categories_workspace ON categories(workspace_id);
+        CREATE INDEX IF NOT EXISTS idx_links_workspace ON links(workspace_id);
+        CREATE INDEX IF NOT EXISTS idx_credentials_workspace ON credentials(workspace_id);
+        ",
+    )?;
+
+    // ワークスペースのシードデータ（初回のみ）
+    let workspace_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM workspaces", [], |row| row.get(0))
+        .unwrap_or(0);
+
+    if workspace_count == 0 {
+        let default_id = uuid::Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO workspaces (id, name, icon, color, position) VALUES (?1, 'デフォルト', 'briefcase', '#6366F1', 0)",
+            rusqlite::params![default_id],
+        )?;
+        conn.execute(
+            "UPDATE categories SET workspace_id = ?1 WHERE workspace_id IS NULL",
+            rusqlite::params![default_id],
+        )?;
+        conn.execute(
+            "UPDATE links SET workspace_id = ?1 WHERE workspace_id IS NULL",
+            rusqlite::params![default_id],
+        )?;
+        conn.execute(
+            "UPDATE credentials SET workspace_id = ?1 WHERE workspace_id IS NULL",
+            rusqlite::params![default_id],
+        )?;
+        conn.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES ('active_workspace_id', ?1)",
+            rusqlite::params![default_id],
+        )?;
+    }
+
     // FTS同期トリガー
     conn.execute_batch(
         "

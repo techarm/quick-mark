@@ -32,6 +32,7 @@ export function SearchWindow() {
     name: string;
     field: 'password' | 'username';
   } | null>(null);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | undefined>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -39,14 +40,14 @@ export function SearchWindow() {
   const searchMode: SearchMode = query.startsWith('@') ? 'credentials' : 'links';
   const effectiveQuery = searchMode === 'credentials' ? query.slice(1) : query;
 
-  const doSearch = useCallback(async (q: string, mode: SearchMode) => {
+  const doSearch = useCallback(async (q: string, mode: SearchMode, wsId?: string) => {
     setLoading(true);
     try {
       if (mode === 'credentials') {
-        const creds = await commands.searchCredentials(q);
+        const creds = await commands.searchCredentials(q, wsId);
         setCredentialResults(creds);
       } else {
-        const links = await commands.searchLinks(q);
+        const links = await commands.searchLinks(q, wsId);
         setLinkResults(links);
       }
     } catch (err) {
@@ -56,20 +57,29 @@ export function SearchWindow() {
     }
   }, []);
 
-  // 初回マウント時に検索 + フォーカス
+  // 初回マウント時にワークスペースID取得 + 検索 + フォーカス
   useEffect(() => {
-    doSearch('', 'links');
+    async function init() {
+      try {
+        const wsId = await commands.getActiveWorkspaceId();
+        setActiveWorkspaceId(wsId);
+        doSearch('', 'links', wsId);
+      } catch {
+        doSearch('', 'links');
+      }
+    }
+    init();
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [doSearch]);
 
   // デバウンス検索
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => doSearch(effectiveQuery, searchMode), 80);
+    debounceRef.current = setTimeout(() => doSearch(effectiveQuery, searchMode, activeWorkspaceId), 80);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [effectiveQuery, searchMode, doSearch]);
+  }, [effectiveQuery, searchMode, doSearch, activeWorkspaceId]);
 
   // 状態を初期化する共通関数
   const resetState = useCallback(() => {
@@ -85,13 +95,20 @@ export function SearchWindow() {
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [doSearch]);
 
-  // ウィンドウ表示時にクエリをクリア・テーマ同期・フォーカス復元
+  // ウィンドウ表示時にクエリをクリア・テーマ同期・フォーカス復元・ワークスペースID再取得
   useEffect(() => {
-    const handleFocus = () => {
+    const handleFocus = async () => {
       // メインウィンドウで変更されたテーマを同期
       const theme = localStorage.getItem('quickmark-theme');
       if (theme === 'light' || theme === 'dark') {
         document.documentElement.dataset.theme = theme;
+      }
+      // ワークスペースIDを最新に更新（メインウィンドウで切替された可能性）
+      try {
+        const wsId = await commands.getActiveWorkspaceId();
+        setActiveWorkspaceId(wsId);
+      } catch {
+        // 無視
       }
       resetState();
     };

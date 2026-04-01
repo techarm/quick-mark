@@ -1,3 +1,26 @@
+export interface Workspace {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  position: number;
+  created_at: string;
+}
+
+export interface CreateWorkspaceInput {
+  name: string;
+  icon?: string;
+  color?: string;
+}
+
+export interface UpdateWorkspaceInput {
+  id: string;
+  name?: string;
+  icon?: string;
+  color?: string;
+  position?: number;
+}
+
 export interface Link {
   id: string;
   url: string;
@@ -5,6 +28,7 @@ export interface Link {
   description: string | null;
   favicon_url: string | null;
   category_id: string | null;
+  workspace_id: string | null;
   is_temporary: boolean;
   expires_at: string | null;
   visit_count: number;
@@ -21,6 +45,7 @@ export interface CreateLinkInput {
   description?: string;
   favicon_url?: string;
   category_id?: string;
+  workspace_id?: string;
   is_temporary?: boolean;
   expires_at?: string;
   is_pinned?: boolean;
@@ -46,6 +71,7 @@ export interface Category {
   icon: string;
   color: string;
   search_alias: string;
+  workspace_id: string | null;
   position: number;
   created_at: string;
   link_count: number;
@@ -57,6 +83,7 @@ export interface CreateCategoryInput {
   icon?: string;
   color?: string;
   search_alias?: string;
+  workspace_id?: string;
 }
 
 export interface UpdateCategoryInput {
@@ -78,6 +105,7 @@ export interface Credential {
   username: string;
   password_encoded: string;
   note: string | null;
+  workspace_id: string | null;
   use_count: number;
   last_used_at: string | null;
   created_at: string;
@@ -89,6 +117,7 @@ export interface CreateCredentialInput {
   username: string;
   password: string;
   note?: string;
+  workspace_id?: string;
 }
 
 export interface UpdateCredentialInput {

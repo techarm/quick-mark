@@ -7,23 +7,30 @@ import {
   EyeOff,
   Info,
   Keyboard,
+  Layers,
   Moon,
   Palette,
+  Pencil,
+  Plus,
   Settings,
   Sun,
+  Trash2,
   Upload,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import * as commands from '../lib/commands';
 import { isMac, modKey, shiftKey } from '../lib/utils';
 import { useUIStore } from '../stores/ui.store';
 
-type SettingsTab = 'general' | 'appearance' | 'shortcuts' | 'about';
+import type { Workspace } from '../lib/types';
+
+type SettingsTab = 'general' | 'workspaces' | 'appearance' | 'shortcuts' | 'about';
 
 const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { id: 'general', label: '一般', icon: <Settings size={16} /> },
+  { id: 'workspaces', label: 'ワークスペース', icon: <Layers size={16} /> },
   { id: 'appearance', label: '外観', icon: <Palette size={16} /> },
   { id: 'shortcuts', label: 'ショートカット', icon: <Keyboard size={16} /> },
   { id: 'about', label: 'About', icon: <Info size={16} /> },
@@ -34,9 +41,26 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void;
   onImport: () => void;
   onExport: () => void;
+  workspaces: Workspace[];
+  activeWorkspaceId: string | null;
+  onSwitchWorkspace: (id: string) => void;
+  onCreateWorkspace: (name: string, color: string) => void;
+  onUpdateWorkspace: (id: string, name: string, color: string) => void;
+  onDeleteWorkspace: (id: string) => void;
 }
 
-export function SettingsDialog({ open, onOpenChange, onImport, onExport }: SettingsDialogProps) {
+export function SettingsDialog({
+  open,
+  onOpenChange,
+  onImport,
+  onExport,
+  workspaces,
+  activeWorkspaceId,
+  onSwitchWorkspace,
+  onCreateWorkspace,
+  onUpdateWorkspace,
+  onDeleteWorkspace,
+}: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
   return (
@@ -45,7 +69,7 @@ export function SettingsDialog({ open, onOpenChange, onImport, onExport }: Setti
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content
           className="dialog-content glass-overlay"
-          style={{ width: 600, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+          style={{ width: 640, maxHeight: '80vh', minHeight: 480, display: 'flex', flexDirection: 'column' }}
         >
           <div className="dialog-header">
             <Dialog.Title asChild>
@@ -91,6 +115,16 @@ export function SettingsDialog({ open, onOpenChange, onImport, onExport }: Setti
             {/* 右コンテンツ */}
             <div style={{ flex: 1, padding: 20, overflow: 'auto' }}>
               {activeTab === 'general' && <GeneralTab onImport={onImport} onExport={onExport} />}
+              {activeTab === 'workspaces' && (
+                <WorkspacesTab
+                  workspaces={workspaces}
+                  activeWorkspaceId={activeWorkspaceId}
+                  onSwitch={onSwitchWorkspace}
+                  onCreate={onCreateWorkspace}
+                  onUpdate={onUpdateWorkspace}
+                  onDelete={onDeleteWorkspace}
+                />
+              )}
               {activeTab === 'appearance' && <AppearanceTab />}
               {activeTab === 'shortcuts' && <ShortcutsTab />}
               {activeTab === 'about' && <AboutTab />}
@@ -541,6 +575,256 @@ function ShortcutRow({ action, keys }: { action: string; keys: string[] }) {
           </kbd>
         ))}
       </div>
+    </div>
+  );
+}
+
+const WORKSPACE_COLORS = [
+  '#6366F1', '#E25050', '#F59E0B', '#10B981', '#3B82F6',
+  '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#6B7280',
+];
+
+function WorkspacesTab({
+  workspaces,
+  activeWorkspaceId,
+  onSwitch,
+  onCreate,
+  onUpdate,
+  onDelete,
+}: {
+  workspaces: Workspace[];
+  activeWorkspaceId: string | null;
+  onSwitch: (id: string) => void;
+  onCreate: (name: string, color: string) => void;
+  onUpdate: (id: string, name: string, color: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formName, setFormName] = useState('');
+  const [formColor, setFormColor] = useState(WORKSPACE_COLORS[0]);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim()) return;
+    if (editingId) {
+      onUpdate(editingId, formName.trim(), formColor);
+      setEditingId(null);
+    } else {
+      onCreate(formName.trim(), formColor);
+    }
+    setFormName('');
+    setFormColor(WORKSPACE_COLORS[0]);
+    setShowForm(false);
+  };
+
+  const startEdit = (ws: Workspace) => {
+    setEditingId(ws.id);
+    setFormName(ws.name);
+    setFormColor(ws.color);
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setFormName('');
+    setFormColor(WORKSPACE_COLORS[0]);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <section>
+        <SectionTitle>ワークスペース一覧</SectionTitle>
+        <p
+          style={{
+            fontSize: 12,
+            color: 'var(--text-tertiary)',
+            marginBottom: 10,
+            lineHeight: 1.6,
+          }}
+        >
+          ワークスペースごとにリンク・カテゴリ・認証情報が独立して管理されます。
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {workspaces.map((ws) => (
+            <div
+              key={ws.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '8px 12px',
+                borderRadius: 'var(--radius-md)',
+                border:
+                  ws.id === activeWorkspaceId
+                    ? '2px solid var(--accent-primary)'
+                    : '1px solid var(--border-medium)',
+                background:
+                  ws.id === activeWorkspaceId ? 'rgba(226, 80, 80, 0.06)' : 'var(--bg-elevated)',
+                cursor: 'pointer',
+              }}
+              onClick={() => onSwitch(ws.id)}
+              onKeyDown={(e) => e.key === 'Enter' && onSwitch(ws.id)}
+            >
+              <div
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  background: ws.color,
+                  flexShrink: 0,
+                }}
+              />
+              <span
+                style={{
+                  flex: 1,
+                  fontSize: 13,
+                  fontWeight: ws.id === activeWorkspaceId ? 600 : 400,
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {ws.name}
+              </span>
+              {ws.id === activeWorkspaceId && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--accent-primary)',
+                    fontWeight: 600,
+                  }}
+                >
+                  使用中
+                </span>
+              )}
+              <button
+                type="button"
+                className="titlebar-icon-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startEdit(ws);
+                }}
+                title="編集"
+                style={{ width: 28, height: 28 }}
+              >
+                <Pencil size={13} />
+              </button>
+              {workspaces.length > 1 && (
+                <button
+                  type="button"
+                  className="titlebar-icon-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDeleteId(ws.id);
+                  }}
+                  title="削除"
+                  style={{ width: 28, height: 28, color: 'var(--accent-danger, #ef4444)' }}
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* 削除確認 */}
+        {confirmDeleteId && (
+          <div
+            style={{
+              marginTop: 10,
+              padding: 12,
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--accent-danger, #ef4444)',
+              background: 'rgba(239, 68, 68, 0.06)',
+            }}
+          >
+            <p style={{ fontSize: 12, color: 'var(--text-primary)', marginBottom: 8 }}>
+              このワークスペースを削除すると、含まれるすべてのリンク・カテゴリ・認証情報が削除されます。この操作は取り消せません。
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ fontSize: 12, color: 'var(--accent-danger, #ef4444)' }}
+                onClick={() => {
+                  onDelete(confirmDeleteId);
+                  setConfirmDeleteId(null);
+                }}
+              >
+                削除する
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ fontSize: 12 }}
+                onClick={() => setConfirmDeleteId(null)}
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* 追加/編集フォーム */}
+      {showForm ? (
+        <section>
+          <SectionTitle>{editingId ? 'ワークスペースを編集' : '新しいワークスペース'}</SectionTitle>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <input
+              type="text"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              placeholder="ワークスペース名"
+              className="input-field"
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {WORKSPACE_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setFormColor(color)}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    background: color,
+                    border: formColor === color ? '2px solid var(--text-primary)' : '2px solid transparent',
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                />
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="submit" className="btn btn-primary" style={{ fontSize: 12 }}>
+                {editingId ? '保存' : '作成'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ fontSize: 12 }}
+                onClick={cancelForm}
+              >
+                キャンセル
+              </button>
+            </div>
+          </form>
+        </section>
+      ) : (
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => setShowForm(true)}
+          style={{ gap: 6, fontSize: 13, alignSelf: 'flex-start' }}
+        >
+          <Plus size={15} />
+          ワークスペースを追加
+        </button>
+      )}
     </div>
   );
 }

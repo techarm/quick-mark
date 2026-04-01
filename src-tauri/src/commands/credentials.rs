@@ -14,6 +14,7 @@ pub struct Credential {
     pub username: String,
     pub password_encoded: String,
     pub note: Option<String>,
+    pub workspace_id: Option<String>,
     pub use_count: i64,
     pub last_used_at: Option<String>,
     pub created_at: String,
@@ -26,6 +27,7 @@ pub struct CreateCredentialInput {
     pub username: String,
     pub password: String,
     pub note: Option<String>,
+    pub workspace_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -44,6 +46,7 @@ fn row_to_credential(row: &rusqlite::Row) -> rusqlite::Result<Credential> {
         username: row.get("username")?,
         password_encoded: row.get("password_encoded")?,
         note: row.get("note")?,
+        workspace_id: row.get("workspace_id").unwrap_or(None),
         use_count: row.get("use_count")?,
         last_used_at: row.get("last_used_at")?,
         created_at: row.get("created_at")?,
@@ -60,21 +63,34 @@ fn validate_length(field: &str, value: &str, max: usize) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn get_credentials(db: State<'_, Arc<Mutex<AppDb>>>) -> Result<Vec<Credential>, String> {
+pub fn get_credentials(
+    db: State<'_, Arc<Mutex<AppDb>>>,
+    workspace_id: Option<String>,
+) -> Result<Vec<Credential>, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
-    let mut stmt = conn
-        .prepare("SELECT * FROM credentials ORDER BY name ASC")
-        .map_err(|e| format!("Failed to prepare query: {}", e))?;
-
-    let credentials = stmt
-        .query_map([], row_to_credential)
-        .map_err(|e| format!("Failed to get credentials: {}", e))?
-        .filter_map(|r| r.ok())
-        .collect();
-
-    Ok(credentials)
+    if let Some(ref ws_id) = workspace_id {
+        let mut stmt = conn
+            .prepare("SELECT * FROM credentials WHERE workspace_id = ?1 ORDER BY name ASC")
+            .map_err(|e| format!("Failed to prepare query: {}", e))?;
+        let credentials = stmt
+            .query_map(params![ws_id], row_to_credential)
+            .map_err(|e| format!("Failed to get credentials: {}", e))?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(credentials)
+    } else {
+        let mut stmt = conn
+            .prepare("SELECT * FROM credentials ORDER BY name ASC")
+            .map_err(|e| format!("Failed to prepare query: {}", e))?;
+        let credentials = stmt
+            .query_map([], row_to_credential)
+            .map_err(|e| format!("Failed to get credentials: {}", e))?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(credentials)
+    }
 }
 
 #[tauri::command]
@@ -95,14 +111,15 @@ pub fn create_credential(
     let password_encoded = STANDARD.encode(input.password.as_bytes());
 
     conn.execute(
-        "INSERT INTO credentials (id, name, username, password_encoded, note)
-         VALUES (?1, ?2, ?3, ?4, ?5)",
+        "INSERT INTO credentials (id, name, username, password_encoded, note, workspace_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![
             id,
             input.name,
             input.username,
             password_encoded,
             input.note.unwrap_or_default(),
+            input.workspace_id,
         ],
     )
     .map_err(|e| format!("Failed to create credential: {}", e))?;
@@ -200,44 +217,73 @@ pub fn delete_credential(db: State<'_, Arc<Mutex<AppDb>>>, id: String) -> Result
 pub fn search_credentials(
     db: State<'_, Arc<Mutex<AppDb>>>,
     query: String,
+    workspace_id: Option<String>,
 ) -> Result<Vec<Credential>, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
-    // 使用頻度 + 最終使用日時でソート（よく使うものが上に来る）
     let order_clause = "ORDER BY use_count DESC, last_used_at DESC NULLS LAST, name ASC";
 
     if query.trim().is_empty() {
-        let mut stmt = conn
-            .prepare(&format!("SELECT * FROM credentials {}", order_clause))
-            .map_err(|e| e.to_string())?;
-        let credentials = stmt
-            .query_map([], row_to_credential)
-            .map_err(|e| e.to_string())?
-            .filter_map(|r| r.ok())
-            .collect();
-        return Ok(credentials);
+        if let Some(ref ws_id) = workspace_id {
+            let mut stmt = conn
+                .prepare(&format!("SELECT * FROM credentials WHERE workspace_id = ?1 {}", order_clause))
+                .map_err(|e| e.to_string())?;
+            let credentials = stmt
+                .query_map(params![ws_id], row_to_credential)
+                .map_err(|e| e.to_string())?
+                .filter_map(|r| r.ok())
+                .collect();
+            return Ok(credentials);
+        } else {
+            let mut stmt = conn
+                .prepare(&format!("SELECT * FROM credentials {}", order_clause))
+                .map_err(|e| e.to_string())?;
+            let credentials = stmt
+                .query_map([], row_to_credential)
+                .map_err(|e| e.to_string())?
+                .filter_map(|r| r.ok())
+                .collect();
+            return Ok(credentials);
+        }
     }
 
     let like_pattern = format!("%{}%", query);
-    let mut stmt = conn
-        .prepare(&format!(
-            "SELECT * FROM credentials
-             WHERE name LIKE ?1 COLLATE NOCASE
-                OR username LIKE ?1 COLLATE NOCASE
-             {}
-             LIMIT 20",
-            order_clause
-        ))
-        .map_err(|e| e.to_string())?;
-
-    let credentials = stmt
-        .query_map(params![like_pattern], row_to_credential)
-        .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
-        .collect();
-
-    Ok(credentials)
+    if let Some(ref ws_id) = workspace_id {
+        let mut stmt = conn
+            .prepare(&format!(
+                "SELECT * FROM credentials
+                 WHERE workspace_id = ?2
+                   AND (name LIKE ?1 COLLATE NOCASE OR username LIKE ?1 COLLATE NOCASE)
+                 {}
+                 LIMIT 20",
+                order_clause
+            ))
+            .map_err(|e| e.to_string())?;
+        let credentials = stmt
+            .query_map(params![like_pattern, ws_id], row_to_credential)
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(credentials)
+    } else {
+        let mut stmt = conn
+            .prepare(&format!(
+                "SELECT * FROM credentials
+                 WHERE name LIKE ?1 COLLATE NOCASE
+                    OR username LIKE ?1 COLLATE NOCASE
+                 {}
+                 LIMIT 20",
+                order_clause
+            ))
+            .map_err(|e| e.to_string())?;
+        let credentials = stmt
+            .query_map(params![like_pattern], row_to_credential)
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(credentials)
+    }
 }
 
 #[tauri::command]

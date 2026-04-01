@@ -11,6 +11,7 @@ interface AddLinkDialogProps {
   categories: Category[];
   onSubmit: (input: CreateLinkInput) => void;
   onUpdate?: (input: UpdateLinkInput) => void;
+  workspaceId?: string;
 }
 
 export function AddLinkDialog({
@@ -19,6 +20,7 @@ export function AddLinkDialog({
   categories,
   onSubmit,
   onUpdate,
+  workspaceId,
 }: AddLinkDialogProps) {
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
@@ -77,7 +79,7 @@ export function AddLinkDialog({
         });
 
       const dupPromise = commands
-        .checkDuplicateUrl(trimmed)
+        .checkDuplicateUrl(trimmed, workspaceId)
         .then((info) => {
           setDuplicate(info);
         })

@@ -15,17 +15,50 @@ import type {
   CreateCategoryInput,
   CreateCredentialInput,
   CreateLinkInput,
+  CreateWorkspaceInput,
   Credential,
   Link,
   UpdateCategoryInput,
   UpdateCredentialInput,
   UpdateLinkInput,
+  UpdateWorkspaceInput,
+  Workspace,
 } from './types';
+
+// === ワークスペース ===
+
+export async function getWorkspaces(): Promise<Workspace[]> {
+  return invoke('get_workspaces');
+}
+
+export async function createWorkspace(input: CreateWorkspaceInput): Promise<Workspace> {
+  return invoke('create_workspace', { input });
+}
+
+export async function updateWorkspace(input: UpdateWorkspaceInput): Promise<Workspace> {
+  return invoke('update_workspace', { input });
+}
+
+export async function deleteWorkspace(id: string): Promise<void> {
+  return invoke('delete_workspace', { id });
+}
+
+export async function getActiveWorkspaceId(): Promise<string> {
+  return invoke('get_active_workspace_id');
+}
+
+export async function setActiveWorkspaceId(id: string): Promise<void> {
+  return invoke('set_active_workspace_id', { id });
+}
 
 // === リンク ===
 
-export async function getLinks(categoryId?: string, filter?: string): Promise<Link[]> {
-  return invoke('get_links', { categoryId, filter });
+export async function getLinks(
+  categoryId?: string,
+  filter?: string,
+  workspaceId?: string,
+): Promise<Link[]> {
+  return invoke('get_links', { categoryId, filter, workspaceId });
 }
 
 export async function createLink(input: CreateLinkInput): Promise<Link> {
@@ -40,8 +73,8 @@ export async function deleteLink(id: string): Promise<void> {
   return invoke('delete_link', { id });
 }
 
-export async function searchLinks(query: string): Promise<Link[]> {
-  return invoke('search_links', { query });
+export async function searchLinks(query: string, workspaceId?: string): Promise<Link[]> {
+  return invoke('search_links', { query, workspaceId });
 }
 
 export async function openLink(id: string): Promise<string> {
@@ -60,8 +93,8 @@ export interface LinkCounts {
   pinned: number;
 }
 
-export async function getLinkCounts(): Promise<LinkCounts> {
-  return invoke('get_link_counts');
+export async function getLinkCounts(workspaceId?: string): Promise<LinkCounts> {
+  return invoke('get_link_counts', { workspaceId });
 }
 
 export interface UrlInfo {
@@ -99,8 +132,8 @@ export async function bulkDeleteLinks(linkIds: string[]): Promise<number> {
 
 // === カテゴリ ===
 
-export async function getCategories(): Promise<Category[]> {
-  return invoke('get_categories');
+export async function getCategories(workspaceId?: string): Promise<Category[]> {
+  return invoke('get_categories', { workspaceId });
 }
 
 export async function createCategory(input: CreateCategoryInput): Promise<Category> {
@@ -148,14 +181,17 @@ export async function parseJsonLinks(content: string): Promise<ImportItem[]> {
   return invoke('parse_json_links', { content });
 }
 
-export async function importBookmarks(items: ImportItem[]): Promise<ImportResult> {
-  return invoke('import_bookmarks', { items });
+export async function importBookmarks(
+  items: ImportItem[],
+  workspaceId?: string,
+): Promise<ImportResult> {
+  return invoke('import_bookmarks', { items, workspaceId });
 }
 
 // === エクスポート ===
 
-export async function exportData(): Promise<string> {
-  return invoke('export_data');
+export async function exportData(workspaceId?: string): Promise<string> {
+  return invoke('export_data', { workspaceId });
 }
 
 // === 重複チェック ===
@@ -168,18 +204,24 @@ export interface DuplicateInfo {
   category_name: string | null;
 }
 
-export async function checkDuplicateUrl(url: string): Promise<DuplicateInfo | null> {
-  return invoke('check_duplicate_url', { url });
+export async function checkDuplicateUrl(
+  url: string,
+  workspaceId?: string,
+): Promise<DuplicateInfo | null> {
+  return invoke('check_duplicate_url', { url, workspaceId });
 }
 
-export async function checkDuplicateUrls(urls: string[]): Promise<string[]> {
-  return invoke('check_duplicate_urls', { urls });
+export async function checkDuplicateUrls(
+  urls: string[],
+  workspaceId?: string,
+): Promise<string[]> {
+  return invoke('check_duplicate_urls', { urls, workspaceId });
 }
 
 // === 認証情報 ===
 
-export async function getCredentials(): Promise<Credential[]> {
-  return invoke('get_credentials');
+export async function getCredentials(workspaceId?: string): Promise<Credential[]> {
+  return invoke('get_credentials', { workspaceId });
 }
 
 export async function createCredential(input: CreateCredentialInput): Promise<Credential> {
@@ -194,8 +236,8 @@ export async function deleteCredential(id: string): Promise<void> {
   return invoke('delete_credential', { id });
 }
 
-export async function searchCredentials(query: string): Promise<Credential[]> {
-  return invoke('search_credentials', { query });
+export async function searchCredentials(query: string, workspaceId?: string): Promise<Credential[]> {
+  return invoke('search_credentials', { query, workspaceId });
 }
 
 export async function copyCredentialPassword(id: string): Promise<void> {

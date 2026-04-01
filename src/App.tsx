@@ -26,6 +26,7 @@ import type {
   Credential,
   Link,
   UpdateLinkInput,
+  Workspace,
 } from './lib/types';
 import { isModKey, safeOpenUrl } from './lib/utils';
 import { useUIStore } from './stores/ui.store';
@@ -84,6 +85,7 @@ function App() {
   const [links, setLinks] = useState<Link[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [linkCounts, setLinkCounts] = useState<commands.LinkCounts>({
     all: 0,
     recent: 0,
@@ -125,28 +127,59 @@ function App() {
     detailPanelOpen,
     selectedLinkIds,
     clearSelection,
+    activeWorkspaceId,
+    setActiveWorkspaceId,
   } = useUIStore();
 
   const isCredentialsView = activeFilter === 'credentials' && !activeCategoryId;
 
+  // ワークスペース初期化
+  const loadWorkspaces = useCallback(async () => {
+    try {
+      const ws = await commands.getWorkspaces();
+      setWorkspaces(ws);
+    } catch (err) {
+      console.error('Failed to load workspaces:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    async function initWorkspace() {
+      try {
+        const [ws, activeId] = await Promise.all([
+          commands.getWorkspaces(),
+          commands.getActiveWorkspaceId(),
+        ]);
+        setWorkspaces(ws);
+        setActiveWorkspaceId(activeId);
+      } catch (err) {
+        console.error('Failed to init workspaces:', err);
+      }
+    }
+    initWorkspace();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // データの読み込み
   const loadLinks = useCallback(async () => {
+    if (!activeWorkspaceId) return;
+    const wsId = activeWorkspaceId;
+
     // リンク取得とカウント取得を並行実行
     const linksPromise = (async () => {
       if (searchQuery.trim()) {
-        return commands.searchLinks(searchQuery);
+        return commands.searchLinks(searchQuery, wsId);
       } else if (activeCategoryId) {
-        return commands.getLinks(activeCategoryId);
+        return commands.getLinks(activeCategoryId, undefined, wsId);
       } else {
         const filter =
           activeFilter === 'all' || activeFilter === 'credentials'
             ? undefined
             : (activeFilter ?? undefined);
-        return commands.getLinks(undefined, filter);
+        return commands.getLinks(undefined, filter, wsId);
       }
     })();
 
-    const countsPromise = commands.getLinkCounts();
+    const countsPromise = commands.getLinkCounts(wsId);
 
     try {
       const [results, counts] = await Promise.all([linksPromise, countsPromise]);
@@ -157,7 +190,7 @@ function App() {
       toast.error('リンクの読み込みに失敗しました');
       setLinks([]);
     }
-  }, [searchQuery, activeFilter, activeCategoryId]);
+  }, [searchQuery, activeFilter, activeCategoryId, activeWorkspaceId]);
 
   const loadLinksRef = useRef(loadLinks);
   useEffect(() => {
@@ -165,24 +198,26 @@ function App() {
   }, [loadLinks]);
 
   const loadCategories = useCallback(async () => {
+    if (!activeWorkspaceId) return;
     try {
-      const cats = await commands.getCategories();
+      const cats = await commands.getCategories(activeWorkspaceId);
       setCategories(cats);
     } catch (err) {
       console.error('Failed to load categories:', err);
       toast.error('カテゴリの読み込みに失敗しました');
     }
-  }, []);
+  }, [activeWorkspaceId]);
 
   const loadCredentials = useCallback(async () => {
+    if (!activeWorkspaceId) return;
     try {
-      const creds = await commands.getCredentials();
+      const creds = await commands.getCredentials(activeWorkspaceId);
       setCredentials(creds);
     } catch (err) {
       console.error('Failed to load credentials:', err);
       toast.error('認証情報の読み込みに失敗しました');
     }
-  }, []);
+  }, [activeWorkspaceId]);
 
   useEffect(() => {
     loadLinks();
@@ -341,7 +376,7 @@ function App() {
   const handleAddLink = useCallback(
     async (input: CreateLinkInput) => {
       try {
-        await commands.createLink(input);
+        await commands.createLink({ ...input, workspace_id: activeWorkspaceId ?? undefined });
         loadLinks();
         loadCategories();
         toast.success('リンクを追加しました');
@@ -350,13 +385,13 @@ function App() {
         toast.error('リンクの追加に失敗しました');
       }
     },
-    [loadLinks, loadCategories],
+    [loadLinks, loadCategories, activeWorkspaceId],
   );
 
   // データエクスポート
   const handleExport = useCallback(async () => {
     try {
-      const jsonStr = await commands.exportData();
+      const jsonStr = await commands.exportData(activeWorkspaceId ?? undefined);
 
       const now = new Date();
       const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -376,7 +411,7 @@ function App() {
       console.error('Failed to export:', err);
       toast.error('エクスポートに失敗しました');
     }
-  }, []);
+  }, [activeWorkspaceId]);
 
   // リンクを編集
   const handleEditLink = useCallback((link: Link) => {
@@ -542,7 +577,7 @@ function App() {
           });
           toast.success('カテゴリを更新しました');
         } else {
-          await commands.createCategory(input);
+          await commands.createCategory({ ...input, workspace_id: activeWorkspaceId ?? undefined });
           toast.success('カテゴリを作成しました');
         }
         loadCategories();
@@ -551,7 +586,7 @@ function App() {
         toast.error('カテゴリの保存に失敗しました');
       }
     },
-    [loadCategories],
+    [loadCategories, activeWorkspaceId],
   );
 
   // === 認証情報ハンドラ ===
@@ -600,7 +635,7 @@ function App() {
           });
           toast.success('認証情報を更新しました');
         } else {
-          await commands.createCredential(input);
+          await commands.createCredential({ ...input, workspace_id: activeWorkspaceId ?? undefined });
           toast.success('認証情報を追加しました');
         }
         loadCredentials();
@@ -609,7 +644,7 @@ function App() {
         toast.error('認証情報の保存に失敗しました');
       }
     },
-    [loadCredentials],
+    [loadCredentials, activeWorkspaceId],
   );
 
   const handleCopyCredentialField = useCallback(
@@ -628,6 +663,69 @@ function App() {
     [],
   );
 
+  // === ワークスペースハンドラ ===
+
+  const handleSwitchWorkspace = useCallback(
+    async (id: string) => {
+      try {
+        await commands.setActiveWorkspaceId(id);
+        setActiveWorkspaceId(id);
+      } catch (err) {
+        console.error('Failed to switch workspace:', err);
+        toast.error('ワークスペースの切替に失敗しました');
+      }
+    },
+    [setActiveWorkspaceId],
+  );
+
+  const handleCreateWorkspace = useCallback(
+    async (name: string, color: string) => {
+      try {
+        await commands.createWorkspace({ name, color });
+        loadWorkspaces();
+        toast.success('ワークスペースを作成しました');
+      } catch (err) {
+        console.error('Failed to create workspace:', err);
+        toast.error('ワークスペースの作成に失敗しました');
+      }
+    },
+    [loadWorkspaces],
+  );
+
+  const handleUpdateWorkspace = useCallback(
+    async (id: string, name: string, color: string) => {
+      try {
+        await commands.updateWorkspace({ id, name, color });
+        loadWorkspaces();
+        toast.success('ワークスペースを更新しました');
+      } catch (err) {
+        console.error('Failed to update workspace:', err);
+        toast.error('ワークスペースの更新に失敗しました');
+      }
+    },
+    [loadWorkspaces],
+  );
+
+  const handleDeleteWorkspace = useCallback(
+    async (id: string) => {
+      try {
+        await commands.deleteWorkspace(id);
+        const ws = await commands.getWorkspaces();
+        setWorkspaces(ws);
+        // 削除したのがアクティブだった場合、新しいアクティブを取得
+        if (id === activeWorkspaceId) {
+          const newActiveId = await commands.getActiveWorkspaceId();
+          setActiveWorkspaceId(newActiveId);
+        }
+        toast.success('ワークスペースを削除しました');
+      } catch (err) {
+        console.error('Failed to delete workspace:', err);
+        toast.error('ワークスペースの削除に失敗しました');
+      }
+    },
+    [activeWorkspaceId, setActiveWorkspaceId],
+  );
+
   // サイドバー用カウント（DB由来 + 認証情報）
   const sidebarCounts = {
     ...linkCounts,
@@ -636,10 +734,18 @@ function App() {
 
   const selectedLink = links.find((l) => l.id === selectedLinkId) ?? null;
 
+  // タイトルバーに表示するワークスペース名（2つ以上の場合のみ）
+  const activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspaceId);
+  const titleBarWorkspaceName =
+    workspaces.length >= 2 ? (activeWorkspace?.name ?? undefined) : undefined;
+
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--bg-base)' }}>
       {/* タイトルバー（ウィンドウ全体の上部） */}
-      <TitleBar onOpenSettings={() => setSettingsDialogOpen(true)} />
+      <TitleBar
+        onOpenSettings={() => setSettingsDialogOpen(true)}
+        workspaceName={titleBarWorkspaceName}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         {/* サイドバー */}
@@ -752,6 +858,7 @@ function App() {
         categories={categories}
         onSubmit={handleAddLink}
         onUpdate={handleUpdateLink}
+        workspaceId={activeWorkspaceId ?? undefined}
       />
 
       {/* リンク編集ダイアログ */}
@@ -786,6 +893,12 @@ function App() {
         onOpenChange={setSettingsDialogOpen}
         onImport={() => setImportDialogOpen(true)}
         onExport={handleExport}
+        workspaces={workspaces}
+        activeWorkspaceId={activeWorkspaceId}
+        onSwitchWorkspace={handleSwitchWorkspace}
+        onCreateWorkspace={handleCreateWorkspace}
+        onUpdateWorkspace={handleUpdateWorkspace}
+        onDeleteWorkspace={handleDeleteWorkspace}
       />
 
       {/* インポートダイアログ */}
@@ -796,6 +909,7 @@ function App() {
           loadLinks();
           loadCategories();
         }}
+        workspaceId={activeWorkspaceId ?? undefined}
       />
 
       {/* 確認ダイアログ */}

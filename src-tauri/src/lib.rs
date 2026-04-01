@@ -12,6 +12,7 @@ use commands::credentials::*;
 use commands::export::*;
 use commands::import::*;
 use commands::links::*;
+use commands::workspaces::*;
 
 fn ensure_api_token(app_data_dir: &std::path::Path) -> Result<String, String> {
     let token_path = app_data_dir.join("api_token");
@@ -126,6 +127,13 @@ pub fn run() {
             copy_credential_password,
             copy_credential_field,
             clear_clipboard,
+            // ワークスペース
+            get_workspaces,
+            create_workspace,
+            update_workspace,
+            delete_workspace,
+            get_active_workspace_id,
+            set_active_workspace_id,
             // 設定
             get_api_token,
         ])

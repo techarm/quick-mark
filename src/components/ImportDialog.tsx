@@ -11,6 +11,7 @@ interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete: () => void;
+  workspaceId?: string;
 }
 
 type ImportState = 'idle' | 'parsing' | 'preview' | 'importing' | 'done' | 'fetching-icons';
@@ -20,7 +21,7 @@ interface FaviconProgress {
   total: number;
 }
 
-export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogProps) {
+export function ImportDialog({ open, onOpenChange, onComplete, workspaceId }: ImportDialogProps) {
   const [state, setState] = useState<ImportState>('idle');
   const [items, setItems] = useState<ImportItem[]>([]);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -59,7 +60,7 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
       // 重複チェック
       try {
         const urls = parsed.map((item) => item.url);
-        const dups = await commands.checkDuplicateUrls(urls);
+        const dups = await commands.checkDuplicateUrls(urls, workspaceId);
         setDuplicateUrls(new Set(dups));
       } catch {
         setDuplicateUrls(new Set());
@@ -75,7 +76,7 @@ export function ImportDialog({ open, onOpenChange, onComplete }: ImportDialogPro
   const handleImport = async () => {
     setState('importing');
     try {
-      const res = await commands.importBookmarks(items);
+      const res = await commands.importBookmarks(items, workspaceId);
       setResult(res);
       setState('done');
       onComplete();
