@@ -9,6 +9,32 @@ permissions:
   contents: write
 
 jobs:
+  # ブラウザ拡張機能のZIPパッケージング
+  extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Update extension version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          cd browser-extension
+          jq --arg v "$VERSION" '.version = $v' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+          echo "Extension version set to $VERSION"
+
+      - name: Package browser extension
+        run: |
+          cd browser-extension
+          zip -r "../quickmark-extension-${GITHUB_REF_NAME}.zip" . -x ".*"
+
+      - name: Upload extension to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: quickmark-extension-${{ github.ref_name }}.zip
+          draft: true
+
+  # デスクトップアプリのビルド
   build:
     strategy:
       fail-fast: false
