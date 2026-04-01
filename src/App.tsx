@@ -30,6 +30,36 @@ import type {
 import { isModKey, safeOpenUrl } from './lib/utils';
 import { useUIStore } from './stores/ui.store';
 
+// カーソルがあるモニターの中央にウィンドウを配置（Spotlight風）
+async function centerOnCursorMonitor(win: Awaited<ReturnType<typeof import('@tauri-apps/api/webviewWindow').WebviewWindow.getByLabel>>) {
+  if (!win) return;
+  try {
+    const { availableMonitors, cursorPosition } = await import('@tauri-apps/api/window');
+    const { LogicalPosition } = await import('@tauri-apps/api/dpi');
+    const cursor = await cursorPosition();
+    const monitors = await availableMonitors();
+
+    // カーソルが含まれるモニターを検出
+    const target = monitors.find((m) => {
+      const { x, y } = m.position;
+      const { width, height } = m.size;
+      return cursor.x >= x && cursor.x < x + width && cursor.y >= y && cursor.y < y + height;
+    }) ?? monitors[0];
+
+    if (!target) return;
+
+    const winSize = await win.innerSize();
+    const scale = target.scaleFactor;
+    // モニター中央・やや上寄りに配置（物理ピクセル→論理ピクセル変換）
+    const x = target.position.x / scale + (target.size.width / scale - winSize.width / scale) / 2;
+    const y = target.position.y / scale + (target.size.height / scale - winSize.height / scale) / 3;
+    await win.setPosition(new LogicalPosition(Math.round(x), Math.round(y)));
+  } catch {
+    // フォールバック: 標準のcenter
+    await win.center();
+  }
+}
+
 // 独立検索ウィンドウのトグル（tauri.conf.jsonで事前定義済み）
 async function toggleSearchWindow() {
   try {
@@ -41,6 +71,7 @@ async function toggleSearchWindow() {
     if (visible) {
       await win.hide();
     } else {
+      await centerOnCursorMonitor(win);
       await win.show();
       await win.setFocus();
     }

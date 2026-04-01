@@ -34,6 +34,7 @@ export function SearchWindow() {
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const searchMode: SearchMode = query.startsWith('@') ? 'credentials' : 'links';
   const effectiveQuery = searchMode === 'credentials' ? query.slice(1) : query;
@@ -70,6 +71,20 @@ export function SearchWindow() {
     };
   }, [effectiveQuery, searchMode, doSearch]);
 
+  // 状態を初期化する共通関数
+  const resetState = useCallback(() => {
+    // 保留中のコピータイマーをキャンセル
+    if (copyTimerRef.current) {
+      clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = undefined;
+    }
+    setCopySuccess(null);
+    setQuery('');
+    setCredentialResults([]);
+    doSearch('', 'links');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, [doSearch]);
+
   // ウィンドウ表示時にクエリをクリア・テーマ同期・フォーカス復元
   useEffect(() => {
     const handleFocus = () => {
@@ -78,14 +93,11 @@ export function SearchWindow() {
       if (theme === 'light' || theme === 'dark') {
         document.documentElement.dataset.theme = theme;
       }
-      setCopySuccess(null);
-      setQuery('');
-      doSearch('', 'links');
-      setTimeout(() => inputRef.current?.focus(), 50);
+      resetState();
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [doSearch]);
+  }, [resetState]);
 
   const results = searchMode === 'credentials' ? credentialResults : linkResults;
 
@@ -126,28 +138,32 @@ export function SearchWindow() {
     try {
       await commands.copyCredentialPassword(credential.id);
       setCopySuccess({ name: credential.name, field: 'password' });
-      setTimeout(async () => {
-        setCopySuccess(null);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(async () => {
+        copyTimerRef.current = undefined;
+        resetState();
         await hideWindow();
       }, 1200);
     } catch (err) {
       console.error('Failed to copy password:', err);
     }
-  }, []);
+  }, [resetState]);
 
   // 認証情報のユーザー名をコピー
   const handleCopyUsername = useCallback(async (credential: Credential) => {
     try {
       await commands.copyCredentialField(credential.id, 'username');
       setCopySuccess({ name: credential.name, field: 'username' });
-      setTimeout(async () => {
-        setCopySuccess(null);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(async () => {
+        copyTimerRef.current = undefined;
+        resetState();
         await hideWindow();
       }, 1200);
     } catch (err) {
       console.error('Failed to copy username:', err);
     }
-  }, []);
+  }, [resetState]);
 
   // キーボード
   const handleKeyDown = useCallback(
