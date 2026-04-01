@@ -1,6 +1,5 @@
 import { save } from '@tauri-apps/plugin-dialog';
-import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
-import JSZip from 'jszip';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Toaster, toast } from 'sonner';
 import { ConfirmDialog } from './components/ConfirmDialog';
@@ -397,6 +396,8 @@ function App() {
 
       if (workspaces.length >= 2) {
         // 複数ワークスペース: 各ワークスペースをJSONにしてZIPにまとめる
+        const JSZip = (await import('jszip')).default;
+        const { writeFile } = await import('@tauri-apps/plugin-fs');
         const zip = new JSZip();
         for (const ws of workspaces) {
           const jsonStr = await commands.exportData(ws.id);
