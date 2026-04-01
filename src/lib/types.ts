@@ -78,6 +78,8 @@ export interface Credential {
   username: string;
   password_encoded: string;
   note: string | null;
+  use_count: number;
+  last_used_at: string | null;
   created_at: string;
   updated_at: string;
 }

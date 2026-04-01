@@ -14,6 +14,8 @@ pub struct Credential {
     pub username: String,
     pub password_encoded: String,
     pub note: Option<String>,
+    pub use_count: i64,
+    pub last_used_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -42,6 +44,8 @@ fn row_to_credential(row: &rusqlite::Row) -> rusqlite::Result<Credential> {
         username: row.get("username")?,
         password_encoded: row.get("password_encoded")?,
         note: row.get("note")?,
+        use_count: row.get("use_count")?,
+        last_used_at: row.get("last_used_at")?,
         created_at: row.get("created_at")?,
         updated_at: row.get("updated_at")?,
     })
@@ -200,9 +204,12 @@ pub fn search_credentials(
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
+    // 使用頻度 + 最終使用日時でソート（よく使うものが上に来る）
+    let order_clause = "ORDER BY use_count DESC, last_used_at DESC NULLS LAST, name ASC";
+
     if query.trim().is_empty() {
         let mut stmt = conn
-            .prepare("SELECT * FROM credentials ORDER BY name ASC")
+            .prepare(&format!("SELECT * FROM credentials {}", order_clause))
             .map_err(|e| e.to_string())?;
         let credentials = stmt
             .query_map([], row_to_credential)
@@ -214,13 +221,14 @@ pub fn search_credentials(
 
     let like_pattern = format!("%{}%", query);
     let mut stmt = conn
-        .prepare(
+        .prepare(&format!(
             "SELECT * FROM credentials
              WHERE name LIKE ?1 COLLATE NOCASE
                 OR username LIKE ?1 COLLATE NOCASE
-             ORDER BY name ASC
+             {}
              LIMIT 20",
-        )
+            order_clause
+        ))
         .map_err(|e| e.to_string())?;
 
     let credentials = stmt
@@ -248,6 +256,12 @@ pub fn copy_credential_password(
                 |row| row.get(0),
             )
             .map_err(|e| format!("Failed to get credential: {}", e))?;
+
+        // 使用回数・最終使用日時を更新
+        conn.execute(
+            "UPDATE credentials SET use_count = use_count + 1, last_used_at = datetime('now') WHERE id = ?1",
+            params![id],
+        ).map_err(|e| format!("Failed to update use count: {}", e))?;
 
         let decoded = STANDARD
             .decode(encoded.as_bytes())
@@ -288,6 +302,12 @@ pub fn copy_credential_field(
 ) -> Result<(), String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
+
+    // 使用回数・最終使用日時を更新
+    conn.execute(
+        "UPDATE credentials SET use_count = use_count + 1, last_used_at = datetime('now') WHERE id = ?1",
+        params![id],
+    ).map_err(|e| format!("Failed to update use count: {}", e))?;
 
     let value: String = match field.as_str() {
         "username" => conn

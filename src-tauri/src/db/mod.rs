@@ -114,6 +114,14 @@ fn run_migrations(conn: &Connection) -> Result<()> {
         "ALTER TABLE categories ADD COLUMN search_alias TEXT DEFAULT ''",
     );
 
+    // マイグレーション: credentials に使用頻度カラム追加（既存DB対応）
+    let _ = conn.execute_batch(
+        "ALTER TABLE credentials ADD COLUMN use_count INTEGER NOT NULL DEFAULT 0",
+    );
+    let _ = conn.execute_batch(
+        "ALTER TABLE credentials ADD COLUMN last_used_at TEXT DEFAULT NULL",
+    );
+
     // FTS同期トリガー
     conn.execute_batch(
         "
