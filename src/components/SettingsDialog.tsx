@@ -8,10 +8,13 @@ import {
   Info,
   Keyboard,
   Layers,
+  Loader2,
   Moon,
   Palette,
   Pencil,
   Plus,
+  RefreshCw,
+  RotateCcw,
   Settings,
   Sun,
   Trash2,
@@ -24,6 +27,7 @@ import * as commands from '../lib/commands';
 import { isMac, modKey, shiftKey } from '../lib/utils';
 import { useUIStore } from '../stores/ui.store';
 
+import type { UpdateStatus } from '../hooks/useUpdater';
 import type { Workspace } from '../lib/types';
 
 type SettingsTab = 'general' | 'workspaces' | 'appearance' | 'shortcuts' | 'about';
@@ -47,6 +51,15 @@ interface SettingsDialogProps {
   onCreateWorkspace: (name: string, color: string) => void;
   onUpdateWorkspace: (id: string, name: string, color: string) => void;
   onDeleteWorkspace: (id: string) => void;
+  updater: {
+    status: UpdateStatus;
+    availableVersion: string | null;
+    progress: number;
+    error: string | null;
+    checkForUpdate: () => Promise<boolean>;
+    downloadAndInstall: () => Promise<void>;
+    restartApp: () => Promise<void>;
+  };
 }
 
 export function SettingsDialog({
@@ -60,6 +73,7 @@ export function SettingsDialog({
   onCreateWorkspace,
   onUpdateWorkspace,
   onDeleteWorkspace,
+  updater,
 }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
@@ -127,7 +141,7 @@ export function SettingsDialog({
               )}
               {activeTab === 'appearance' && <AppearanceTab />}
               {activeTab === 'shortcuts' && <ShortcutsTab />}
-              {activeTab === 'about' && <AboutTab />}
+              {activeTab === 'about' && <AboutTab updater={updater} />}
             </div>
           </div>
         </Dialog.Content>
@@ -829,7 +843,11 @@ function WorkspacesTab({
   );
 }
 
-function AboutTab() {
+function AboutTab({
+  updater,
+}: {
+  updater: SettingsDialogProps['updater'];
+}) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <section style={{ textAlign: 'center', padding: '10px 0' }}>
@@ -857,10 +875,135 @@ function AboutTab() {
         </p>
       </section>
 
+      {/* アップデート */}
+      <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
+        <SectionTitle>アップデート</SectionTitle>
+        <UpdateSection updater={updater} />
+      </div>
+
       <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
         <InfoRow label="アプリ名" value="QuickMark" />
         <InfoRow label="開発者" value="techarm" />
       </div>
+    </div>
+  );
+}
+
+function UpdateSection({ updater }: { updater: SettingsDialogProps['updater'] }) {
+  const { status, availableVersion, progress, error } = updater;
+
+  if (status === 'ready') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <p style={{ fontSize: 13, color: 'var(--accent-success, #10b981)' }}>
+          アップデートの準備ができました。再起動して適用してください。
+        </p>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={updater.restartApp}
+          style={{ gap: 6, fontSize: 13, alignSelf: 'flex-start' }}
+        >
+          <RotateCcw size={14} />
+          再起動して適用
+        </button>
+      </div>
+    );
+  }
+
+  if (status === 'downloading') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+          v{availableVersion} をダウンロード中... {progress}%
+        </p>
+        <div
+          style={{
+            height: 6,
+            borderRadius: 3,
+            background: 'var(--bg-elevated)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              height: '100%',
+              width: `${progress}%`,
+              background: 'var(--accent-gradient)',
+              borderRadius: 3,
+              transition: 'width 200ms ease',
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'available') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <p style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+          新しいバージョン <strong>v{availableVersion}</strong> が利用可能です。
+        </p>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={updater.downloadAndInstall}
+          style={{ gap: 6, fontSize: 13, alignSelf: 'flex-start' }}
+        >
+          <Download size={14} />
+          ダウンロードしてインストール
+        </button>
+      </div>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+          確認に失敗しました: {error}
+        </p>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={updater.checkForUpdate}
+          style={{ gap: 6, fontSize: 13, alignSelf: 'flex-start' }}
+        >
+          <RefreshCw size={14} />
+          再試行
+        </button>
+      </div>
+    );
+  }
+
+  // idle or checking
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={updater.checkForUpdate}
+        disabled={status === 'checking'}
+        style={{ gap: 6, fontSize: 13 }}
+      >
+        {status === 'checking' ? (
+          <>
+            <Loader2 size={14} className="animate-spin" />
+            確認中...
+          </>
+        ) : (
+          <>
+            <RefreshCw size={14} />
+            アップデートを確認
+          </>
+        )}
+      </button>
+      {status === 'idle' && (
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+          最新のバージョンです
+        </span>
+      )}
     </div>
   );
 }

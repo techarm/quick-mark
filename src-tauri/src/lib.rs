@@ -50,7 +50,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+
             let db_path = db::get_db_path(&app.handle())
                 .map_err(|e| Box::<dyn std::error::Error>::from(e))?;
             let app_db = db::init_db(&db_path)

@@ -29,6 +29,7 @@ import type {
   Workspace,
 } from './lib/types';
 import { isModKey, safeOpenUrl } from './lib/utils';
+import { useUpdater } from './hooks/useUpdater';
 import { useUIStore } from './stores/ui.store';
 
 // カーソルがあるモニターの中央にウィンドウを配置（Spotlight風）
@@ -132,6 +133,22 @@ function App() {
   } = useUIStore();
 
   const isCredentialsView = activeFilter === 'credentials' && !activeCategoryId;
+
+  // アップデーター（起動後3秒で自動チェック）
+  const updater = useUpdater(true);
+
+  // アップデート検知時にトースト通知
+  useEffect(() => {
+    if (updater.status === 'available' && updater.availableVersion) {
+      toast.info(`新しいバージョン v${updater.availableVersion} が利用可能です`, {
+        action: {
+          label: '詳細',
+          onClick: () => setSettingsDialogOpen(true),
+        },
+        duration: 10000,
+      });
+    }
+  }, [updater.status, updater.availableVersion]);
 
   // ワークスペース初期化
   const loadWorkspaces = useCallback(async () => {
@@ -924,6 +941,7 @@ function App() {
         onCreateWorkspace={handleCreateWorkspace}
         onUpdateWorkspace={handleUpdateWorkspace}
         onDeleteWorkspace={handleDeleteWorkspace}
+        updater={updater}
       />
 
       {/* インポートダイアログ */}
