@@ -1,5 +1,6 @@
 import { save } from '@tauri-apps/plugin-dialog';
-import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import JSZip from 'jszip';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Toaster, toast } from 'sonner';
 import { ConfirmDialog } from './components/ConfirmDialog';
@@ -391,27 +392,50 @@ function App() {
   // データエクスポート
   const handleExport = useCallback(async () => {
     try {
-      const jsonStr = await commands.exportData(activeWorkspaceId ?? undefined);
-
       const now = new Date();
       const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const defaultName = `quickmark-backup-${dateStr}.json`;
 
-      const filePath = await save({
-        title: 'エクスポート先を選択',
-        defaultPath: defaultName,
-        filters: [{ name: 'JSON', extensions: ['json'] }],
-      });
+      if (workspaces.length >= 2) {
+        // 複数ワークスペース: 各ワークスペースをJSONにしてZIPにまとめる
+        const zip = new JSZip();
+        for (const ws of workspaces) {
+          const jsonStr = await commands.exportData(ws.id);
+          zip.file(`${ws.name}.json`, jsonStr);
+        }
+        const blob = await zip.generateAsync({ type: 'uint8array' });
+        const defaultName = `quickmark-backup-${dateStr}.zip`;
 
-      if (filePath) {
-        await writeTextFile(filePath, jsonStr);
-        toast.success('エクスポートが完了しました');
+        const filePath = await save({
+          title: 'エクスポート先を選択',
+          defaultPath: defaultName,
+          filters: [{ name: 'ZIP', extensions: ['zip'] }],
+        });
+
+        if (filePath) {
+          await writeFile(filePath, blob);
+          toast.success('全ワークスペースをエクスポートしました');
+        }
+      } else {
+        // 単一ワークスペース: 従来通りJSON
+        const jsonStr = await commands.exportData(activeWorkspaceId ?? undefined);
+        const defaultName = `quickmark-backup-${dateStr}.json`;
+
+        const filePath = await save({
+          title: 'エクスポート先を選択',
+          defaultPath: defaultName,
+          filters: [{ name: 'JSON', extensions: ['json'] }],
+        });
+
+        if (filePath) {
+          await writeTextFile(filePath, jsonStr);
+          toast.success('エクスポートが完了しました');
+        }
       }
     } catch (err) {
       console.error('Failed to export:', err);
       toast.error('エクスポートに失敗しました');
     }
-  }, [activeWorkspaceId]);
+  }, [activeWorkspaceId, workspaces]);
 
   // リンクを編集
   const handleEditLink = useCallback((link: Link) => {

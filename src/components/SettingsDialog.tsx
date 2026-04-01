@@ -242,7 +242,7 @@ function GeneralTab({ onImport, onExport }: { onImport: () => void; onExport: ()
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             type="button"
-            className="btn btn-ghost"
+            className="btn btn-secondary"
             onClick={onImport}
             style={{ gap: 6, fontSize: 13 }}
           >
@@ -251,7 +251,7 @@ function GeneralTab({ onImport, onExport }: { onImport: () => void; onExport: ()
           </button>
           <button
             type="button"
-            className="btn btn-ghost"
+            className="btn btn-secondary"
             onClick={onExport}
             style={{ gap: 6, fontSize: 13 }}
           >
