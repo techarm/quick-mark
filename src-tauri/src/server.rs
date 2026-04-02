@@ -1,5 +1,7 @@
 use std::path::PathBuf;
+use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
@@ -90,24 +92,30 @@ fn check_auth(request: &Request, token: &str) -> bool {
         .unwrap_or(false)
 }
 
-pub fn start_server(db: Arc<Mutex<AppDb>>, token: String, app_data_dir: PathBuf, app_handle: AppHandle) {
-    let server = try_bind_server();
-    let server = match server {
-        Some(s) => s,
-        None => {
-            eprintln!("[QuickMark API] Failed to bind to any port in range {}-{}", PORT_START, PORT_END);
-            return;
-        }
-    };
+/// サーバーを作成して返す。呼び出し側でスレッド起動とunblock()による停止を管理する。
+pub fn create_server(app_data_dir: &PathBuf) -> Option<Server> {
+    let server = try_bind_server()?;
 
     let port = server.server_addr().to_ip().map(|a| a.port()).unwrap_or(0);
     eprintln!("[QuickMark API] Server started on port {}", port);
 
-    // Write active port to file
     let port_file = app_data_dir.join("api_port");
     let _ = std::fs::write(&port_file, port.to_string());
 
-    for mut request in server.incoming_requests() {
+    Some(server)
+}
+
+pub fn run_server(server: &Server, db: Arc<Mutex<AppDb>>, token: String, app_handle: AppHandle, shutdown_rx: mpsc::Receiver<()>) {
+    let timeout = Duration::from_millis(500);
+    loop {
+        if shutdown_rx.try_recv().is_ok() {
+            break;
+        }
+        let mut request = match server.recv_timeout(timeout) {
+            Ok(Some(req)) => req,
+            Ok(None) => continue,
+            Err(_) => break,
+        };
         let path = request.url().split('?').next().unwrap_or("").to_string();
         let method = request.method().clone();
 

@@ -2,13 +2,12 @@ mod commands;
 mod db;
 mod server;
 
+use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use tauri::{Manager, WindowEvent};
+use tauri::{Manager, RunEvent, WindowEvent};
 #[cfg(target_os = "macos")]
 use std::time::Duration;
-#[cfg(target_os = "macos")]
-use tauri::RunEvent;
 
 use commands::browser::*;
 use commands::categories::*;
@@ -76,12 +75,17 @@ pub fn run() {
             let token = ensure_api_token(&app_data_dir)
                 .map_err(|e| Box::<dyn std::error::Error>::from(e))?;
 
-            // HTTPサーバーをバックグラウンドスレッドで起動
-            let server_db = Arc::clone(&db);
-            let server_app_handle = app.handle().clone();
-            std::thread::spawn(move || {
-                server::start_server(server_db, token, app_data_dir, server_app_handle);
-            });
+            // HTTPサーバーを作成・起動（シャットダウンチャネル付き）
+            let (shutdown_tx, shutdown_rx) = mpsc::channel();
+            app.manage(shutdown_tx);
+
+            if let Some(http_server) = server::create_server(&app_data_dir) {
+                let server_db = Arc::clone(&db);
+                let server_app_handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    server::run_server(&http_server, server_db, token, server_app_handle, shutdown_rx);
+                });
+            }
 
             app.manage(db);
 
@@ -154,11 +158,15 @@ pub fn run() {
                         api.prevent_close();
                         let _ = window.hide();
                     }
-                    // Windows: メインウィンドウを閉じたらプロセスを完全終了
-                    #[cfg(target_os = "windows")]
-                    if window.label() == "main" {
+                    // Windows: メインウィンドウ閉鎖時にsearch-paletteも閉じる
+                    #[cfg(not(target_os = "macos"))]
+                    {
                         let _ = api;
-                        std::process::exit(0);
+                        if window.label() == "main" {
+                            if let Some(search) = window.app_handle().get_webview_window("search-palette") {
+                                let _ = search.destroy();
+                            }
+                        }
                     }
                 }
                 WindowEvent::Focused(focused) => {
@@ -188,6 +196,13 @@ pub fn run() {
                         let _ = window.show();
                         let _ = window.set_focus();
                     }
+                }
+            }
+
+            // 全ウィンドウ閉鎖後、HTTPサーバーにシャットダウンシグナルを送信
+            if matches!(_event, RunEvent::ExitRequested { .. }) {
+                if let Some(tx) = _app.try_state::<mpsc::Sender<()>>() {
+                    let _ = tx.send(());
                 }
             }
         });
