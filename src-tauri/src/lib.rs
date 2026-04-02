@@ -3,8 +3,12 @@ mod db;
 mod server;
 
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
-use tauri::{Manager, RunEvent, WindowEvent};
+use std::time::Instant;
+use tauri::{Manager, WindowEvent};
+#[cfg(target_os = "macos")]
+use std::time::Duration;
+#[cfg(target_os = "macos")]
+use tauri::RunEvent;
 
 use commands::browser::*;
 use commands::categories::*;
@@ -150,9 +154,12 @@ pub fn run() {
                         api.prevent_close();
                         let _ = window.hide();
                     }
-                    // Windows: 通常通り閉じる
-                    #[cfg(not(target_os = "macos"))]
-                    let _ = api;
+                    // Windows: メインウィンドウを閉じたらプロセスを完全終了
+                    #[cfg(target_os = "windows")]
+                    if window.label() == "main" {
+                        let _ = api;
+                        std::process::exit(0);
+                    }
                 }
                 WindowEvent::Focused(focused) => {
                     // 検索ウィンドウ: フォーカスを失ったら自動非表示（Spotlight風）
