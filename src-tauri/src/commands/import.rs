@@ -150,6 +150,7 @@ pub fn parse_bookmarks_html(content: String) -> Result<Vec<ImportItem>, String> 
 pub fn import_bookmarks(
     db: State<'_, Arc<Mutex<AppDb>>>,
     items: Vec<ImportItem>,
+    workspace_id: Option<String>,
 ) -> Result<ImportResult, String> {
     let mut db = db.lock().map_err(|e| format!("Import operation failed: {}", e))?;
     let tx = db.conn.transaction().map_err(|e| format!("Failed to start transaction: {}", e))?;
@@ -161,10 +162,14 @@ pub fn import_bookmarks(
     // フォルダ名→カテゴリIDのキャッシュ
     let mut folder_cache: std::collections::HashMap<String, String> = std::collections::HashMap::new();
 
-    // 重複チェック用のprepared statement
-    let mut dup_stmt = tx
-        .prepare("SELECT 1 FROM links WHERE url = ?1 LIMIT 1")
-        .map_err(|e| format!("Import operation failed: {}", e))?;
+    // 重複チェック用のprepared statement（ワークスペーススコープ）
+    let mut dup_stmt = if workspace_id.is_some() {
+        tx.prepare("SELECT 1 FROM links WHERE url = ?1 AND workspace_id = ?2 LIMIT 1")
+            .map_err(|e| format!("Import operation failed: {}", e))?
+    } else {
+        tx.prepare("SELECT 1 FROM links WHERE url = ?1 LIMIT 1")
+            .map_err(|e| format!("Import operation failed: {}", e))?
+    };
 
     for item in &items {
         // URLバリデーション（http/httpsのみ許可）
@@ -178,10 +183,16 @@ pub fn import_bookmarks(
             continue;
         }
 
-        // URLの重複チェック
-        let exists: bool = dup_stmt
-            .query_row(params![item.url], |_| Ok(true))
-            .unwrap_or(false);
+        // URLの重複チェック（ワークスペーススコープ）
+        let exists: bool = if let Some(ref ws_id) = workspace_id {
+            dup_stmt
+                .query_row(params![item.url, ws_id], |_| Ok(true))
+                .unwrap_or(false)
+        } else {
+            dup_stmt
+                .query_row(params![item.url], |_| Ok(true))
+                .unwrap_or(false)
+        };
 
         if exists {
             skipped += 1;
@@ -193,14 +204,22 @@ pub fn import_bookmarks(
             if let Some(cached_id) = folder_cache.get(folder_name) {
                 Some(cached_id.clone())
             } else {
-                // 既存カテゴリを検索
-                let existing: Option<String> = tx
-                    .query_row(
+                // 既存カテゴリを検索（ワークスペーススコープ）
+                let existing: Option<String> = if let Some(ref ws_id) = workspace_id {
+                    tx.query_row(
+                        "SELECT id FROM categories WHERE name = ?1 AND workspace_id = ?2",
+                        params![folder_name, ws_id],
+                        |row| row.get(0),
+                    )
+                    .ok()
+                } else {
+                    tx.query_row(
                         "SELECT id FROM categories WHERE name = ?1",
                         params![folder_name],
                         |row| row.get(0),
                     )
-                    .ok();
+                    .ok()
+                };
 
                 if let Some(id) = existing {
                     folder_cache.insert(folder_name.clone(), id.clone());
@@ -210,8 +229,8 @@ pub fn import_bookmarks(
                     let id = uuid::Uuid::new_v4().to_string();
                     let path = format!("/{}", id);
                     tx.execute(
-                        "INSERT INTO categories (id, name, path) VALUES (?1, ?2, ?3)",
-                        params![id, folder_name, path],
+                        "INSERT INTO categories (id, name, path, workspace_id) VALUES (?1, ?2, ?3, ?4)",
+                        params![id, folder_name, path, workspace_id],
                     )
                     .map_err(|e| format!("Import operation failed: {}", e))?;
                     folder_cache.insert(folder_name.clone(), id.clone());
@@ -226,8 +245,8 @@ pub fn import_bookmarks(
         // リンクを作成
         let link_id = uuid::Uuid::new_v4().to_string();
         tx.execute(
-            "INSERT INTO links (id, url, title, category_id) VALUES (?1, ?2, ?3, ?4)",
-            params![link_id, item.url, item.title, category_id],
+            "INSERT INTO links (id, url, title, category_id, workspace_id) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![link_id, item.url, item.title, category_id, workspace_id],
         )
         .map_err(|e| format!("Import operation failed: {}", e))?;
 

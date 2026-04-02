@@ -14,6 +14,7 @@ pub struct Category {
     pub icon: String,
     pub color: String,
     pub search_alias: String,
+    pub workspace_id: Option<String>,
     pub position: i64,
     pub created_at: String,
     pub link_count: i64,
@@ -26,6 +27,7 @@ pub struct CreateCategoryInput {
     pub icon: Option<String>,
     pub color: Option<String>,
     pub search_alias: Option<String>,
+    pub workspace_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -49,38 +51,61 @@ fn row_to_category(row: &rusqlite::Row) -> rusqlite::Result<Category> {
         icon: row.get("icon")?,
         color: row.get("color")?,
         search_alias: row.get("search_alias").unwrap_or_default(),
+        workspace_id: row.get("workspace_id").unwrap_or(None),
         position: row.get("position")?,
         created_at: row.get("created_at")?,
         link_count: row.get("link_count")?,
     })
 }
 
-pub fn get_categories_impl(conn: &Connection) -> Result<Vec<Category>, String> {
-    let mut stmt = conn
-        .prepare(
-            "SELECT c.*, COUNT(l.id) AS link_count
-             FROM categories c
-             LEFT JOIN links l ON l.category_id = c.id
-             GROUP BY c.id
-             ORDER BY c.position ASC, c.name ASC",
-        )
-        .map_err(|e| format!("Category operation failed: {}", e))?;
+pub fn get_categories_impl(conn: &Connection, workspace_id: Option<&str>) -> Result<Vec<Category>, String> {
+    if let Some(ws_id) = workspace_id {
+        let mut stmt = conn
+            .prepare(
+                "SELECT c.*, COUNT(l.id) AS link_count
+                 FROM categories c
+                 LEFT JOIN links l ON l.category_id = c.id
+                 WHERE c.workspace_id = ?1
+                 GROUP BY c.id
+                 ORDER BY c.position ASC, c.name ASC",
+            )
+            .map_err(|e| format!("Category operation failed: {}", e))?;
 
-    let categories = stmt
-        .query_map([], row_to_category)
-        .map_err(|e| format!("Category operation failed: {}", e))?
-        .filter_map(|r| r.ok())
-        .collect();
+        let categories = stmt
+            .query_map(params![ws_id], row_to_category)
+            .map_err(|e| format!("Category operation failed: {}", e))?
+            .filter_map(|r| r.ok())
+            .collect();
 
-    Ok(categories)
+        Ok(categories)
+    } else {
+        let mut stmt = conn
+            .prepare(
+                "SELECT c.*, COUNT(l.id) AS link_count
+                 FROM categories c
+                 LEFT JOIN links l ON l.category_id = c.id
+                 GROUP BY c.id
+                 ORDER BY c.position ASC, c.name ASC",
+            )
+            .map_err(|e| format!("Category operation failed: {}", e))?;
+
+        let categories = stmt
+            .query_map([], row_to_category)
+            .map_err(|e| format!("Category operation failed: {}", e))?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        Ok(categories)
+    }
 }
 
 #[tauri::command]
 pub fn get_categories(
     db: State<'_, Arc<Mutex<AppDb>>>,
+    workspace_id: Option<String>,
 ) -> Result<Vec<Category>, String> {
     let db = db.lock().map_err(|e| format!("Category operation failed: {}", e))?;
-    get_categories_impl(&db.conn)
+    get_categories_impl(&db.conn, workspace_id.as_deref())
 }
 
 #[tauri::command]
@@ -129,8 +154,8 @@ pub fn create_category(
         .unwrap_or(-1);
 
     conn.execute(
-        "INSERT INTO categories (id, name, parent_id, path, icon, color, search_alias, position)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        "INSERT INTO categories (id, name, parent_id, path, icon, color, search_alias, workspace_id, position)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
             id,
             input.name,
@@ -139,6 +164,7 @@ pub fn create_category(
             input.icon.unwrap_or_else(|| "folder".to_string()),
             input.color.unwrap_or_else(|| "#E25050".to_string()),
             input.search_alias.unwrap_or_default(),
+            input.workspace_id,
             max_pos + 1,
         ],
     )

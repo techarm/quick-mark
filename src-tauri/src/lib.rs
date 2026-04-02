@@ -12,6 +12,7 @@ use commands::credentials::*;
 use commands::export::*;
 use commands::import::*;
 use commands::links::*;
+use commands::workspaces::*;
 
 fn ensure_api_token(app_data_dir: &std::path::Path) -> Result<String, String> {
     let token_path = app_data_dir.join("api_token");
@@ -49,7 +50,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+
             let db_path = db::get_db_path(&app.handle())
                 .map_err(|e| Box::<dyn std::error::Error>::from(e))?;
             let app_db = db::init_db(&db_path)
@@ -93,6 +98,7 @@ pub fn run() {
             search_links,
             open_link,
             cleanup_expired_links,
+            get_link_counts,
             get_links_without_favicon,
             refresh_single_favicon,
             move_links_to_category,
@@ -125,6 +131,13 @@ pub fn run() {
             copy_credential_password,
             copy_credential_field,
             clear_clipboard,
+            // ワークスペース
+            get_workspaces,
+            create_workspace,
+            update_workspace,
+            delete_workspace,
+            get_active_workspace_id,
+            set_active_workspace_id,
             // 設定
             get_api_token,
         ])

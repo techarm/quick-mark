@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
-use crate::commands::browser::extract_domain;
+use crate::commands::browser::{extract_domain, fetch_favicon_as_base64};
 use crate::db::AppDb;
 
 /// URLを検証する。http/httpsスキームのみ許可。
@@ -33,6 +33,7 @@ pub struct Link {
     pub description: Option<String>,
     pub favicon_url: Option<String>,
     pub category_id: Option<String>,
+    pub workspace_id: Option<String>,
     pub is_temporary: bool,
     pub expires_at: Option<String>,
     pub visit_count: i64,
@@ -50,6 +51,7 @@ pub struct CreateLinkInput {
     pub description: Option<String>,
     pub favicon_url: Option<String>,
     pub category_id: Option<String>,
+    pub workspace_id: Option<String>,
     pub is_temporary: Option<bool>,
     pub expires_at: Option<String>,
     pub is_pinned: Option<bool>,
@@ -76,6 +78,7 @@ fn row_to_link(row: &rusqlite::Row) -> rusqlite::Result<Link> {
         description: row.get("description")?,
         favicon_url: row.get("favicon_url")?,
         category_id: row.get("category_id")?,
+        workspace_id: row.get("workspace_id").unwrap_or(None),
         is_temporary: row.get::<_, i64>("is_temporary")? != 0,
         expires_at: row.get("expires_at")?,
         visit_count: row.get("visit_count")?,
@@ -92,41 +95,64 @@ pub fn get_links(
     db: State<'_, Arc<Mutex<AppDb>>>,
     category_id: Option<String>,
     filter: Option<String>,
+    workspace_id: Option<String>,
 ) -> Result<Vec<Link>, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
+
+    let ws_filter = if workspace_id.is_some() { " AND workspace_id = ?1" } else { "" };
+    let ws_where = if workspace_id.is_some() { " WHERE workspace_id = ?1" } else { "" };
 
     let (sql, filter_params): (String, Vec<Box<dyn rusqlite::types::ToSql>>) = match filter
         .as_deref()
     {
         Some("recent") => (
-            "SELECT * FROM links ORDER BY created_at DESC LIMIT 50".to_string(),
-            vec![],
+            format!("SELECT * FROM links{} ORDER BY created_at DESC LIMIT 50", ws_where),
+            match &workspace_id {
+                Some(id) => vec![Box::new(id.clone()) as Box<dyn rusqlite::types::ToSql>],
+                None => vec![],
+            },
         ),
         Some("temporary") => (
-            "SELECT * FROM links WHERE is_temporary = 1 ORDER BY expires_at ASC".to_string(),
-            vec![],
+            format!("SELECT * FROM links WHERE is_temporary = 1{} ORDER BY expires_at ASC", ws_filter),
+            match &workspace_id {
+                Some(id) => vec![Box::new(id.clone()) as Box<dyn rusqlite::types::ToSql>],
+                None => vec![],
+            },
         ),
         Some("expired") => (
-            "SELECT * FROM links WHERE is_temporary = 1 AND expires_at < datetime('now') ORDER BY expires_at DESC"
-                .to_string(),
-            vec![],
+            format!("SELECT * FROM links WHERE is_temporary = 1 AND expires_at < datetime('now'){} ORDER BY expires_at DESC", ws_filter),
+            match &workspace_id {
+                Some(id) => vec![Box::new(id.clone()) as Box<dyn rusqlite::types::ToSql>],
+                None => vec![],
+            },
         ),
         Some("pinned") => (
-            "SELECT * FROM links WHERE is_pinned = 1 ORDER BY position ASC".to_string(),
-            vec![],
+            format!("SELECT * FROM links WHERE is_pinned = 1{} ORDER BY position ASC", ws_filter),
+            match &workspace_id {
+                Some(id) => vec![Box::new(id.clone()) as Box<dyn rusqlite::types::ToSql>],
+                None => vec![],
+            },
         ),
         _ => {
             if let Some(ref cat_id) = category_id {
-                (
-                    "SELECT * FROM links WHERE category_id = ?1 ORDER BY position ASC, created_at DESC"
-                        .to_string(),
-                    vec![Box::new(cat_id.clone()) as Box<dyn rusqlite::types::ToSql>],
-                )
+                let mut p: Vec<Box<dyn rusqlite::types::ToSql>> = vec![];
+                let sql = if let Some(ref ws_id) = workspace_id {
+                    p.push(Box::new(ws_id.clone()));
+                    p.push(Box::new(cat_id.clone()));
+                    "SELECT * FROM links WHERE workspace_id = ?1 AND category_id = ?2 ORDER BY position ASC, created_at DESC".to_string()
+                } else {
+                    p.push(Box::new(cat_id.clone()));
+                    "SELECT * FROM links WHERE category_id = ?1 ORDER BY position ASC, created_at DESC".to_string()
+                };
+                (sql, p)
             } else {
                 (
-                    "SELECT * FROM links ORDER BY created_at DESC".to_string(),
-                    vec![],
+                    format!("SELECT * FROM links{} ORDER BY created_at DESC", ws_where),
+                    match &workspace_id {
+                        Some(id) => vec![Box::new(id.clone()) as Box<dyn rusqlite::types::ToSql>],
+                        None => vec![],
+                    },
                 )
             }
         }
@@ -152,14 +178,22 @@ pub fn create_link_impl(conn: &Connection, input: CreateLinkInput) -> Result<Lin
         validate_length("説明", desc, 2000)?;
     }
 
-    // 重複URLチェック
-    let exists: bool = conn
-        .query_row(
+    // 重複URLチェック（ワークスペーススコープ）
+    let exists: bool = if let Some(ref ws_id) = input.workspace_id {
+        conn.query_row(
+            "SELECT 1 FROM links WHERE url = ?1 AND workspace_id = ?2 LIMIT 1",
+            params![input.url, ws_id],
+            |_| Ok(true),
+        )
+        .unwrap_or(false)
+    } else {
+        conn.query_row(
             "SELECT 1 FROM links WHERE url = ?1 LIMIT 1",
             params![input.url],
             |_| Ok(true),
         )
-        .unwrap_or(false);
+        .unwrap_or(false)
+    };
     if exists {
         return Err("このURLは既に登録されています".to_string());
     }
@@ -167,8 +201,8 @@ pub fn create_link_impl(conn: &Connection, input: CreateLinkInput) -> Result<Lin
     let id = uuid::Uuid::new_v4().to_string();
 
     conn.execute(
-        "INSERT INTO links (id, url, title, description, favicon_url, category_id, is_temporary, expires_at, is_pinned)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        "INSERT INTO links (id, url, title, description, favicon_url, category_id, workspace_id, is_temporary, expires_at, is_pinned)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         params![
             id,
             input.url,
@@ -176,6 +210,7 @@ pub fn create_link_impl(conn: &Connection, input: CreateLinkInput) -> Result<Lin
             input.description.unwrap_or_default(),
             input.favicon_url.unwrap_or_default(),
             input.category_id,
+            input.workspace_id,
             input.is_temporary.unwrap_or(false) as i64,
             input.expires_at,
             input.is_pinned.unwrap_or(false) as i64,
@@ -282,29 +317,44 @@ pub fn delete_link(
 pub fn search_links(
     db: State<'_, Arc<Mutex<AppDb>>>,
     query: String,
+    workspace_id: Option<String>,
 ) -> Result<Vec<Link>, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
     if query.trim().is_empty() {
         // 空クエリ: ピン留め + 最近アクセス
-        let mut pinned_stmt = conn
-            .prepare("SELECT * FROM links WHERE is_pinned = 1 ORDER BY position, created_at DESC")
-            .map_err(|e| e.to_string())?;
-        let mut pinned: Vec<Link> = pinned_stmt
-            .query_map([], row_to_link)
-            .map_err(|e| e.to_string())?
-            .filter_map(|r| r.ok())
-            .collect();
+        let (pinned_sql, recent_sql) = if workspace_id.is_some() {
+            (
+                "SELECT * FROM links WHERE is_pinned = 1 AND workspace_id = ?1 ORDER BY position, created_at DESC",
+                "SELECT * FROM links WHERE is_pinned = 0 AND workspace_id = ?1 ORDER BY last_visited_at DESC, created_at DESC LIMIT 10",
+            )
+        } else {
+            (
+                "SELECT * FROM links WHERE is_pinned = 1 ORDER BY position, created_at DESC",
+                "SELECT * FROM links WHERE is_pinned = 0 ORDER BY last_visited_at DESC, created_at DESC LIMIT 10",
+            )
+        };
 
-        let mut recent_stmt = conn
-            .prepare("SELECT * FROM links WHERE is_pinned = 0 ORDER BY last_visited_at DESC, created_at DESC LIMIT 10")
-            .map_err(|e| e.to_string())?;
-        let recent: Vec<Link> = recent_stmt
-            .query_map([], row_to_link)
-            .map_err(|e| e.to_string())?
-            .filter_map(|r| r.ok())
-            .collect();
+        let mut pinned_stmt = conn.prepare(pinned_sql).map_err(|e| e.to_string())?;
+        let mut pinned: Vec<Link> = if let Some(ref ws_id) = workspace_id {
+            pinned_stmt.query_map(params![ws_id], row_to_link)
+        } else {
+            pinned_stmt.query_map([], row_to_link)
+        }
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+
+        let mut recent_stmt = conn.prepare(recent_sql).map_err(|e| e.to_string())?;
+        let recent: Vec<Link> = if let Some(ref ws_id) = workspace_id {
+            recent_stmt.query_map(params![ws_id], row_to_link)
+        } else {
+            recent_stmt.query_map([], row_to_link)
+        }
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
 
         pinned.extend(recent);
         return Ok(pinned);
@@ -318,8 +368,23 @@ pub fn search_links(
         .join(" ");
 
     let fts_results: Result<Vec<Link>, String> = (|| {
-        let mut stmt = conn
-            .prepare(
+        let (fts_sql, has_ws) = if workspace_id.is_some() {
+            (
+                "SELECT l.* FROM links_fts fts
+                 JOIN links l ON l.rowid = fts.rowid
+                 WHERE links_fts MATCH ?1 AND l.workspace_id = ?2
+                 ORDER BY
+                    (fts.rank * -1.0) * 0.5 +
+                    (CASE WHEN l.visit_count > 0 THEN l.visit_count * 0.15 ELSE 0 END) +
+                    (CASE WHEN l.last_visited_at IS NOT NULL
+                        THEN (julianday('now') - julianday(l.last_visited_at)) * -0.02
+                        ELSE 0 END)
+                 DESC
+                 LIMIT 20",
+                true,
+            )
+        } else {
+            (
                 "SELECT l.* FROM links_fts fts
                  JOIN links l ON l.rowid = fts.rowid
                  WHERE links_fts MATCH ?1
@@ -331,14 +396,19 @@ pub fn search_links(
                         ELSE 0 END)
                  DESC
                  LIMIT 20",
+                false,
             )
-            .map_err(|e| e.to_string())?;
+        };
 
-        let results: Vec<Link> = stmt
-            .query_map(params![fts_query], row_to_link)
-            .map_err(|e| e.to_string())?
-            .filter_map(|r| r.ok())
-            .collect();
+        let mut stmt = conn.prepare(fts_sql).map_err(|e| e.to_string())?;
+        let results: Vec<Link> = if has_ws {
+            stmt.query_map(params![fts_query, workspace_id.as_ref().unwrap()], row_to_link)
+        } else {
+            stmt.query_map(params![fts_query], row_to_link)
+        }
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
         Ok(results)
     })();
 
@@ -349,8 +419,22 @@ pub fn search_links(
 
     // フォールバック: LIKE検索（カテゴリ名+エイリアスも対象）
     let like_pattern = format!("%{}%", query);
-    let mut stmt = conn
-        .prepare(
+    let (like_sql, has_ws) = if workspace_id.is_some() {
+        (
+            "SELECT l.* FROM links l
+             LEFT JOIN categories c ON l.category_id = c.id
+             WHERE l.workspace_id = ?2
+               AND (l.title LIKE ?1 COLLATE NOCASE
+                OR l.url LIKE ?1 COLLATE NOCASE
+                OR l.description LIKE ?1 COLLATE NOCASE
+                OR c.name LIKE ?1 COLLATE NOCASE
+                OR c.search_alias LIKE ?1 COLLATE NOCASE)
+             ORDER BY l.visit_count DESC, l.last_visited_at DESC
+             LIMIT 20",
+            true,
+        )
+    } else {
+        (
             "SELECT l.* FROM links l
              LEFT JOIN categories c ON l.category_id = c.id
              WHERE l.title LIKE ?1 COLLATE NOCASE
@@ -360,14 +444,19 @@ pub fn search_links(
                 OR c.search_alias LIKE ?1 COLLATE NOCASE
              ORDER BY l.visit_count DESC, l.last_visited_at DESC
              LIMIT 20",
+            false,
         )
-        .map_err(|e| e.to_string())?;
+    };
 
-    let links = stmt
-        .query_map(params![like_pattern], row_to_link)
-        .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
-        .collect();
+    let mut stmt = conn.prepare(like_sql).map_err(|e| e.to_string())?;
+    let links = if has_ws {
+        stmt.query_map(params![like_pattern, workspace_id.as_ref().unwrap()], row_to_link)
+    } else {
+        stmt.query_map(params![like_pattern], row_to_link)
+    }
+    .map_err(|e| e.to_string())?
+    .filter_map(|r| r.ok())
+    .collect();
 
     Ok(links)
 }
@@ -414,7 +503,54 @@ pub fn cleanup_expired_links(
     Ok(deleted as i64)
 }
 
-/// favicon_urlが空のリンクIDリストを取得
+/// スマートフォルダ用のリンクカウントを取得（フィルタに依存しない）
+#[derive(Debug, Serialize)]
+pub struct LinkCounts {
+    pub all: i64,
+    pub recent: i64,
+    pub temporary: i64,
+    pub expired: i64,
+    pub pinned: i64,
+}
+
+#[tauri::command]
+pub fn get_link_counts(
+    db: State<'_, Arc<Mutex<AppDb>>>,
+    workspace_id: Option<String>,
+) -> Result<LinkCounts, String> {
+    let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
+    let conn = &db.conn;
+
+    if let Some(ref ws_id) = workspace_id {
+        let count = |sql: &str| -> Result<i64, String> {
+            conn.query_row(sql, params![ws_id], |row| row.get(0))
+                .map_err(|e| e.to_string())
+        };
+
+        Ok(LinkCounts {
+            all: count("SELECT COUNT(*) FROM links WHERE workspace_id = ?1")?,
+            recent: count("SELECT COUNT(*) FROM links WHERE workspace_id = ?1 AND created_at >= datetime('now', '-7 days')")?,
+            temporary: count("SELECT COUNT(*) FROM links WHERE workspace_id = ?1 AND is_temporary = 1")?,
+            expired: count("SELECT COUNT(*) FROM links WHERE workspace_id = ?1 AND is_temporary = 1 AND expires_at IS NOT NULL AND expires_at < datetime('now')")?,
+            pinned: count("SELECT COUNT(*) FROM links WHERE workspace_id = ?1 AND is_pinned = 1")?,
+        })
+    } else {
+        let count = |sql: &str| -> Result<i64, String> {
+            conn.query_row(sql, [], |row| row.get(0))
+                .map_err(|e| e.to_string())
+        };
+
+        Ok(LinkCounts {
+            all: count("SELECT COUNT(*) FROM links")?,
+            recent: count("SELECT COUNT(*) FROM links WHERE created_at >= datetime('now', '-7 days')")?,
+            temporary: count("SELECT COUNT(*) FROM links WHERE is_temporary = 1")?,
+            expired: count("SELECT COUNT(*) FROM links WHERE is_temporary = 1 AND expires_at IS NOT NULL AND expires_at < datetime('now')")?,
+            pinned: count("SELECT COUNT(*) FROM links WHERE is_pinned = 1")?,
+        })
+    }
+}
+
+/// favicon未取得（空・NULL・URLベース）のリンクIDリストを取得
 #[tauri::command]
 pub fn get_links_without_favicon(
     db: State<'_, Arc<Mutex<AppDb>>>,
@@ -422,8 +558,9 @@ pub fn get_links_without_favicon(
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
+    // base64データURIでないものも再取得対象にする
     let mut stmt = conn
-        .prepare("SELECT id, url FROM links WHERE favicon_url IS NULL OR favicon_url = ''")
+        .prepare("SELECT id, url FROM links WHERE favicon_url IS NULL OR favicon_url = '' OR favicon_url NOT LIKE 'data:%'")
         .map_err(|e| e.to_string())?;
 
     let links = stmt
@@ -454,7 +591,7 @@ pub fn refresh_single_favicon(
     Ok(())
 }
 
-/// 後方互換: 簡易版（Google Favicon APIのみ）
+/// 後方互換: 簡易版（Google Favicon APIのみ、base64で保存）
 #[tauri::command]
 pub fn refresh_favicons(
     db: State<'_, Arc<Mutex<AppDb>>>,
@@ -475,13 +612,15 @@ pub fn refresh_favicons(
     let mut updated = 0i64;
     for (id, url) in &links {
         let domain = extract_domain(url);
-        let favicon_url = format!("https://www.google.com/s2/favicons?domain={}&sz=32", domain);
-        conn.execute(
-            "UPDATE links SET favicon_url = ?1 WHERE id = ?2",
-            params![favicon_url, id],
-        )
-        .map_err(|e| e.to_string())?;
-        updated += 1;
+        let favicon_data = fetch_favicon_as_base64(&domain);
+        if !favicon_data.is_empty() {
+            conn.execute(
+                "UPDATE links SET favicon_url = ?1 WHERE id = ?2",
+                params![favicon_data, id],
+            )
+            .map_err(|e| e.to_string())?;
+            updated += 1;
+        }
     }
 
     Ok(updated)
@@ -563,24 +702,44 @@ pub struct DuplicateInfo {
     pub category_name: Option<String>,
 }
 
-pub fn check_duplicate_url_impl(conn: &Connection, url: &str) -> Result<Option<DuplicateInfo>, String> {
-    let result = conn.query_row(
-        "SELECT l.id, l.url, l.title, l.category_id, c.name
-         FROM links l
-         LEFT JOIN categories c ON l.category_id = c.id
-         WHERE l.url = ?1
-         LIMIT 1",
-        params![url],
-        |row| {
-            Ok(DuplicateInfo {
-                id: row.get(0)?,
-                url: row.get(1)?,
-                title: row.get(2)?,
-                category_id: row.get(3)?,
-                category_name: row.get(4)?,
-            })
-        },
-    );
+pub fn check_duplicate_url_impl(conn: &Connection, url: &str, workspace_id: Option<&str>) -> Result<Option<DuplicateInfo>, String> {
+    let result = if let Some(ws_id) = workspace_id {
+        conn.query_row(
+            "SELECT l.id, l.url, l.title, l.category_id, c.name
+             FROM links l
+             LEFT JOIN categories c ON l.category_id = c.id
+             WHERE l.url = ?1 AND l.workspace_id = ?2
+             LIMIT 1",
+            params![url, ws_id],
+            |row| {
+                Ok(DuplicateInfo {
+                    id: row.get(0)?,
+                    url: row.get(1)?,
+                    title: row.get(2)?,
+                    category_id: row.get(3)?,
+                    category_name: row.get(4)?,
+                })
+            },
+        )
+    } else {
+        conn.query_row(
+            "SELECT l.id, l.url, l.title, l.category_id, c.name
+             FROM links l
+             LEFT JOIN categories c ON l.category_id = c.id
+             WHERE l.url = ?1
+             LIMIT 1",
+            params![url],
+            |row| {
+                Ok(DuplicateInfo {
+                    id: row.get(0)?,
+                    url: row.get(1)?,
+                    title: row.get(2)?,
+                    category_id: row.get(3)?,
+                    category_name: row.get(4)?,
+                })
+            },
+        )
+    };
 
     match result {
         Ok(info) => Ok(Some(info)),
@@ -594,9 +753,10 @@ pub fn check_duplicate_url_impl(conn: &Connection, url: &str) -> Result<Option<D
 pub fn check_duplicate_url(
     db: State<'_, Arc<Mutex<AppDb>>>,
     url: String,
+    workspace_id: Option<String>,
 ) -> Result<Option<DuplicateInfo>, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
-    check_duplicate_url_impl(&db.conn, &url)
+    check_duplicate_url_impl(&db.conn, &url, workspace_id.as_deref())
 }
 
 /// 複数URLの一括重複チェック（インポート用）
@@ -604,21 +764,36 @@ pub fn check_duplicate_url(
 pub fn check_duplicate_urls(
     db: State<'_, Arc<Mutex<AppDb>>>,
     urls: Vec<String>,
+    workspace_id: Option<String>,
 ) -> Result<Vec<String>, String> {
     let db = db.lock().map_err(|e| format!("DB lock failed: {}", e))?;
     let conn = &db.conn;
 
     let mut duplicates = Vec::new();
-    let mut stmt = conn
-        .prepare("SELECT 1 FROM links WHERE url = ?1 LIMIT 1")
-        .map_err(|e| e.to_string())?;
 
-    for url in &urls {
-        let exists: bool = stmt
-            .query_row(params![url], |_| Ok(true))
-            .unwrap_or(false);
-        if exists {
-            duplicates.push(url.clone());
+    if let Some(ref ws_id) = workspace_id {
+        let mut stmt = conn
+            .prepare("SELECT 1 FROM links WHERE url = ?1 AND workspace_id = ?2 LIMIT 1")
+            .map_err(|e| e.to_string())?;
+        for url in &urls {
+            let exists: bool = stmt
+                .query_row(params![url, ws_id], |_| Ok(true))
+                .unwrap_or(false);
+            if exists {
+                duplicates.push(url.clone());
+            }
+        }
+    } else {
+        let mut stmt = conn
+            .prepare("SELECT 1 FROM links WHERE url = ?1 LIMIT 1")
+            .map_err(|e| e.to_string())?;
+        for url in &urls {
+            let exists: bool = stmt
+                .query_row(params![url], |_| Ok(true))
+                .unwrap_or(false);
+            if exists {
+                duplicates.push(url.clone());
+            }
         }
     }
 

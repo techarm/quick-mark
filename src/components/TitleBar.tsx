@@ -3,9 +3,10 @@ import { useEffect, useState } from 'react';
 
 interface TitleBarProps {
   onOpenSettings?: () => void;
+  workspaceName?: string;
 }
 
-export function TitleBar({ onOpenSettings }: TitleBarProps) {
+export function TitleBar({ onOpenSettings, workspaceName }: TitleBarProps) {
   const [isWindows, setIsWindows] = useState(false);
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export function TitleBar({ onOpenSettings }: TitleBarProps) {
           userSelect: 'none',
         }}
       >
-        QuickMark
+        {workspaceName ? `QuickMark — ${workspaceName}` : 'QuickMark'}
       </span>
 
       {/* 設定ボタン（Windowsではウィンドウ操作ボタンの左に配置） */}

@@ -4,3 +4,4 @@ pub mod credentials;
 pub mod export;
 pub mod import;
 pub mod links;
+pub mod workspaces;

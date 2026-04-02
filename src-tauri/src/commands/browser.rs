@@ -114,56 +114,77 @@ fn extract_favicon_from_html(doc: &Html, page_url: &str) -> Option<String> {
     None
 }
 
-/// favicon URLの多段フォールバック解決
+/// favicon画像を取得してbase64データURIとして返す（多段フォールバック）
 fn resolve_favicon(
     client: &reqwest::blocking::Client,
     page_favicon: Option<String>,
     base_url: &str,
     domain: &str,
 ) -> String {
-    // 1. Google Favicon API（最速・高カバレッジ）
+    // 試行するURL候補を優先順に構築
     let google_favicon = format!(
         "https://www.google.com/s2/favicons?domain={}&sz=32",
         domain
     );
-    if url_is_reachable(client, &google_favicon) {
-        return google_favicon;
-    }
-
-    // 2. ページHTMLのメタデータから取得したfavicon
-    if let Some(ref favicon) = page_favicon {
-        if url_is_reachable(client, favicon) {
-            return favicon.clone();
-        }
-    }
-
-    // 3. ドメインルートの /favicon.ico
     let root_favicon = format!("{}/favicon.ico", base_url);
-    if url_is_reachable(client, &root_favicon) {
-        return root_favicon;
-    }
 
-    // 4. ドメインルートHTMLからfavicon取得
+    let mut candidates = vec![google_favicon];
+    if let Some(ref favicon) = page_favicon {
+        candidates.push(favicon.clone());
+    }
+    candidates.push(root_favicon);
+
+    // ドメインルートHTMLからfavicon取得
     if let Some(meta) = fetch_page_meta(client, base_url) {
         if let Some(favicon) = meta.2 {
-            if url_is_reachable(client, &favicon) {
-                return favicon;
-            }
+            candidates.push(favicon);
         }
     }
 
-    // 5. 取得不可 → 空文字（フロントでデフォルトSVGアイコン表示）
+    // 各候補を順に試行し、画像を取得できたらbase64で返す
+    for url in &candidates {
+        if let Some(data_uri) = fetch_image_as_base64(client, url) {
+            return data_uri;
+        }
+    }
+
+    // 取得不可 → 空文字（フロントでデフォルトSVGアイコン表示）
     String::new()
 }
 
-/// URLがアクセス可能かチェック（HEAD → 200系）
-fn url_is_reachable(client: &reqwest::blocking::Client, url: &str) -> bool {
-    client
-        .head(url)
-        .timeout(Duration::from_secs(3))
+/// 画像URLからデータを取得し、base64データURIに変換
+fn fetch_image_as_base64(client: &reqwest::blocking::Client, url: &str) -> Option<String> {
+    use base64::Engine;
+
+    let resp = client
+        .get(url)
+        .timeout(Duration::from_secs(5))
         .send()
-        .map(|r| r.status().is_success())
-        .unwrap_or(false)
+        .ok()?;
+
+    if !resp.status().is_success() {
+        return None;
+    }
+
+    // Content-TypeからMIMEタイプを判定
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("image/png")
+        .split(';')
+        .next()
+        .unwrap_or("image/png")
+        .trim()
+        .to_string();
+
+    let bytes = resp.bytes().ok()?;
+    if bytes.is_empty() {
+        return None;
+    }
+
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+    Some(format!("data:{};base64,{}", content_type, b64))
 }
 
 /// 相対URLを絶対URLに変換
@@ -180,6 +201,16 @@ fn resolve_url(href: &str, page_url: &str) -> String {
     } else {
         format!("{}/{}", base, href)
     }
+}
+
+/// ドメインからGoogle Favicon APIで画像を取得しbase64データURIで返す（links.rsから利用）
+pub fn fetch_favicon_as_base64(domain: &str) -> String {
+    let client = build_client();
+    let url = format!(
+        "https://www.google.com/s2/favicons?domain={}&sz=32",
+        domain
+    );
+    fetch_image_as_base64(&client, &url).unwrap_or_default()
 }
 
 pub fn extract_domain(url: &str) -> String {

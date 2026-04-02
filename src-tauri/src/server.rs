@@ -8,6 +8,7 @@ use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 use crate::commands::browser::fetch_url_info_impl;
 use crate::commands::categories::get_categories_impl;
 use crate::commands::links::{check_duplicate_url_impl, create_link_impl, CreateLinkInput};
+use crate::commands::workspaces::get_active_workspace_id_impl;
 use crate::db::AppDb;
 
 const PORT_START: u16 = 21579;
@@ -179,7 +180,7 @@ fn handle_create_link(
     db: &Arc<Mutex<AppDb>>,
     app_handle: &AppHandle,
 ) -> Response<std::io::Cursor<Vec<u8>>> {
-    let input: CreateLinkInput = match read_json_body(request) {
+    let mut input: CreateLinkInput = match read_json_body(request) {
         Ok(v) => v,
         Err(e) => return json_response(400, error_response(&e)),
     };
@@ -188,6 +189,13 @@ fn handle_create_link(
         Ok(db) => db,
         Err(e) => return json_response(500, error_response(&format!("DB lock failed: {}", e))),
     };
+
+    // workspace_idが未指定の場合、アクティブワークスペースを使用
+    if input.workspace_id.is_none() {
+        if let Ok(ws_id) = get_active_workspace_id_impl(&db.conn) {
+            input.workspace_id = Some(ws_id);
+        }
+    }
 
     match create_link_impl(&db.conn, input) {
         Ok(link) => {
@@ -212,7 +220,8 @@ fn handle_check_duplicate(
         Err(e) => return json_response(500, error_response(&format!("DB lock failed: {}", e))),
     };
 
-    match check_duplicate_url_impl(&db.conn, &body.url) {
+    let ws_id = get_active_workspace_id_impl(&db.conn).ok();
+    match check_duplicate_url_impl(&db.conn, &body.url, ws_id.as_deref()) {
         Ok(result) => json_response(200, success_response(result)),
         Err(e) => json_response(500, error_response(&e)),
     }
@@ -240,7 +249,8 @@ fn handle_get_categories(
         Err(e) => return json_response(500, error_response(&format!("DB lock failed: {}", e))),
     };
 
-    match get_categories_impl(&db.conn) {
+    let ws_id = get_active_workspace_id_impl(&db.conn).ok();
+    match get_categories_impl(&db.conn, ws_id.as_deref()) {
         Ok(categories) => json_response(200, success_response(categories)),
         Err(e) => json_response(500, error_response(&e)),
     }
