@@ -4,6 +4,11 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
 body {
   width: 340px;
   font-family: "Hiragino Sans", "Noto Sans JP", "Hiragino Kaku Gothic ProN", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -23,27 +28,6 @@ body {
 
 .container {
   padding: 16px;
-}
-
-/* === Header === */
-.header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 200, 200, 0.07);
-}
-
-.logo {
-  color: #e25050;
-  flex-shrink: 0;
-}
-
-.header h1 {
-  font-size: 15px;
-  font-weight: 600;
-  color: rgba(252, 248, 248, 0.95);
 }
 
 /* === Loading skeleton === */
@@ -209,8 +193,7 @@ body {
 
 /* === Duplicate badge === */
 .duplicate-badge {
-  margin-left: auto;
-  flex-shrink: 0;
+  display: inline-block;
   font-size: 11px;
   font-weight: 500;
   color: #2ed573;
@@ -218,6 +201,7 @@ body {
   padding: 2px 8px;
   border-radius: 4px;
   white-space: nowrap;
+  margin-bottom: 8px;
 }
 
 .duplicate-badge[hidden] {
@@ -280,13 +264,6 @@ select.input option {
     color: rgba(30, 20, 20, 0.92);
     background: #ffffff;
   }
-
-  .header {
-    border-bottom-color: rgba(120, 80, 80, 0.1);
-  }
-
-  .logo { color: #cc4040; }
-  .header h1 { color: rgba(30, 20, 20, 0.92); }
 
   .skeleton {
     background: linear-gradient(90deg, rgba(120,80,80,0.06) 25%, rgba(120,80,80,0.1) 50%, rgba(120,80,80,0.06) 75%);

@@ -4,13 +4,18 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
 body {
   font-family: "Hiragino Sans", "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   color: rgba(252, 248, 248, 0.95);
   background: #1a1414;
-  padding: 24px;
+  padding: 0 16px 12px;
   min-width: 400px;
   -webkit-font-smoothing: antialiased;
 }
@@ -20,27 +25,6 @@ body {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
-}
-
-/* === Header === */
-.header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 200, 200, 0.07);
-}
-
-.logo {
-  color: #e25050;
-  flex-shrink: 0;
-}
-
-.header h1 {
-  font-size: 16px;
-  font-weight: 600;
-  color: rgba(252, 248, 248, 0.95);
 }
 
 /* === Form === */
