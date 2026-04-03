@@ -83,6 +83,7 @@ async function toggleSearchWindow() {
 }
 
 function App() {
+  const [initializing, setInitializing] = useState(true);
   const [links, setLinks] = useState<Link[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
@@ -171,6 +172,8 @@ function App() {
         setActiveWorkspaceId(activeId);
       } catch (err) {
         console.error('Failed to init workspaces:', err);
+      } finally {
+        setInitializing(false);
       }
     }
     initWorkspace();
@@ -780,6 +783,36 @@ function App() {
   const activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspaceId);
   const titleBarWorkspaceName =
     workspaces.length >= 2 ? (activeWorkspace?.name ?? undefined) : undefined;
+
+  if (initializing) {
+    return (
+      <div
+        className="flex h-screen flex-col items-center justify-center"
+        style={{ background: 'var(--bg-base)', gap: 16 }}
+      >
+        <div
+          style={{
+            fontSize: 22,
+            fontWeight: 700,
+            color: 'var(--text-primary)',
+            letterSpacing: '0.02em',
+          }}
+        >
+          QuickMark
+        </div>
+        <div
+          style={{
+            width: 24,
+            height: 24,
+            border: '2.5px solid var(--border-medium)',
+            borderTopColor: 'var(--accent-primary)',
+            borderRadius: '50%',
+            animation: 'spin 600ms linear infinite',
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col" style={{ background: 'var(--bg-base)' }}>
