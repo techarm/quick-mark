@@ -1,19 +1,31 @@
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
-use tauri::Manager;
 
 pub struct AppDb {
     pub conn: Connection,
 }
 
-pub fn get_db_path(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
-    let app_dir = app_handle
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
-    std::fs::create_dir_all(&app_dir)
-        .map_err(|e| format!("Failed to create app data dir: {}", e))?;
-    Ok(app_dir.join("quickmark.db"))
+pub fn get_db_path(#[allow(unused)] app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
+    // 開発時はプロジェクトディレクトリにDBを保存（本番データと分離）
+    #[cfg(debug_assertions)]
+    {
+        let dev_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data");
+        std::fs::create_dir_all(&dev_dir)
+            .map_err(|e| format!("Failed to create dev data dir: {}", e))?;
+        return Ok(dev_dir.join("quickmark-dev.db"));
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        use tauri::Manager;
+        let app_dir = app_handle
+            .path()
+            .app_data_dir()
+            .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+        std::fs::create_dir_all(&app_dir)
+            .map_err(|e| format!("Failed to create app data dir: {}", e))?;
+        Ok(app_dir.join("quickmark.db"))
+    }
 }
 
 pub fn init_db(db_path: &PathBuf) -> Result<AppDb> {
